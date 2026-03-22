@@ -32,8 +32,8 @@ class QLBPW():
 
         # Prioritized Experience Replay (Empirical experience)
         self.buffer = []
-        self.td_errors = []
         self.maxcap = 5000
+        self.pos = 0
 
     def epsilon_greedy(self, Q, state):
         a = random.random()
@@ -46,10 +46,12 @@ class QLBPW():
         pass
 
     def adjust_learning_rate(self):
-        # print(self.buffer)
         b = len(self.buffer)
 
-        ranks = np.arange(1, b + 1)
+        errors = np.array([abs(exp[4]) for exp in self.buffer])
+        ranks = np.argsort(np.argsort(-errors)) + 1
+
+        # ranks = np.arange(1, b + 1)
         p_j_unnormalized = 1.0 / ranks                    # Equation (10)
         p_j = p_j_unnormalized / np.sum(p_j_unnormalized) # Normalize to create valid probabilities
         
@@ -66,12 +68,22 @@ class QLBPW():
 
     # Experience Replay
     def er_add_experience(self, state, action, reward, next_state, td_error):
-        if len(self.buffer) >= self.maxcap:
-            self.buffer.pop(-1)
+        experience = [int(state), int(action), float(reward), int(next_state), float(td_error)]
         
-        self.buffer.append([int(state), int(action), float(reward), int(next_state), float(td_error)])
+        if len(self.buffer) < self.maxcap:
+            # If the buffer isn't full yet, just append
+            self.buffer.append(experience)
+        else:
+            # If full, overwrite the oldest memory
+            self.buffer[self.pos] = experience
+        
+        self.pos = (self.pos + 1) % self.maxcap
 
-        self.buffer.sort(key=lambda x: abs(x[4]), reverse=True)
+        # if len(self.buffer) >= self.maxcap:
+        #     self.buffer.pop(-1)
+        
+        # self.buffer.append([int(state), int(action), float(reward), int(next_state), float(td_error)])
+        # self.buffer.sort(key=lambda x: abs(x[4]), reverse=True)
 
     def er_update(self, Q, state, action, reward, next_state, td_error, sampled_idx, adjusted_lr):
         if not self.buffer:
@@ -96,7 +108,7 @@ class QLBPW():
         
         # 5. Update the error in the buffer and re-sort
         self.buffer[sampled_idx][4] = float(new_td_error)
-        self.buffer.sort(key=lambda x: abs(x[4]), reverse=True)
+        # self.buffer.sort(key=lambda x: abs(x[4]), reverse=True)
         
         return Q
     
@@ -186,6 +198,7 @@ class QLBPW():
         optimal_time_recorded = False   
         expected_time = 27
         track_time = True
+        e_tracker = 20
 
         for e in range(self.episodes):
 
@@ -208,7 +221,7 @@ class QLBPW():
                 # trackers
                 steps_taken += 1 
                 if ((time.time() - start_time) >= float(expected_time)) and optimal_time_recorded == False and track_time:
-                    print(f"{expected_time} seconds has passed.")
+                    print(f"<!> {expected_time} seconds has passed.")
                     track_time = False
 
                 # Random Sampling
@@ -241,8 +254,13 @@ class QLBPW():
             if curr_state == self.goal_state and steps_taken == optimal_path_length:
                 if not optimal_time_recorded:
                     time_to_optimal = time.time() - start_time
-                    print(f"\n<!> Optimal path of {optimal_path_length} steps achieved at episode {e}! Time taken: {time_to_optimal:.2f} seconds\n")
+                    print(f"<!> Optimal path of {optimal_path_length} steps achieved at episode {e}! Time taken: {time_to_optimal:.2f} seconds")
                     optimal_time_recorded = True
+            
+            # Episode tracker - prints progress every 100 episodes
+            if (e + 1) % e_tracker == 0:
+                elapsed = time.time() - start_time
+                print(f"Episode {e + 1}/{self.episodes} | Elapsed: {elapsed:.2f}s | Steps: {steps_taken}")
             # self.print_q_table(Q)
 
         # tracker
@@ -253,11 +271,17 @@ class QLBPW():
 if __name__ == "__main__":
 
     # Freeze the randomness for consistent testing
-    random.seed(42)
-    np.random.seed(42)
+    # random.seed(40)
+    # np.random.seed(40)
     
-    a = QLBPW(episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.9, beta=0.3)
-    print("Starting simulation...")
+    a = QLBPW(
+        episodes=1000, 
+        alpha=0.1, 
+        gamma=0.9, 
+        epsilon=0.9, 
+        beta=0.3
+    )
+    print("Starting simulation wib...")
     start_time = time.time() # Start the stopwatch
     
     a.simulate_qlbpw(start_time) # <-- Pass the stopwatch in
