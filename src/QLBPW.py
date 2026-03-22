@@ -1,14 +1,19 @@
 import numpy as np
 import random
 import time
+import matplotlib.pyplot as plt
 
 class QLBPW():
-    def __init__(self, episodes, alpha, gamma, epsilon, beta):
+    def __init__(self, episodes, alpha, gamma, epsilon, beta, dynamic_obs, num_dynamic_obs=5):
         self.episodes = episodes
         self.initial_alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
         self.beta = beta # superparam 
+
+        # New dynamic obstacle settings
+        self.dynamic_obs_enabled = dynamic_obs
+        self.num_dynamic_obs = num_dynamic_obs
 
         # Environment
         self.grid_rows = 9
@@ -18,7 +23,8 @@ class QLBPW():
         self.no_of_states = self.grid_rows * self.grid_cols
         self.start_state = 0
         self.goal_state = 60
-        self.obstacles = [
+
+        self.static_obstacles = [
             # 1, 4, 8,
             # 15,
             # 18, 21,
@@ -30,10 +36,32 @@ class QLBPW():
             # 72
         ]
 
+        self.obstacles = []
+
         # Prioritized Experience Replay (Empirical experience)
         self.buffer = []
         self.maxcap = 5000
         self.pos = 0
+
+    def generate_dynamic_obstacles(self):
+        # Reset the obstacles list to just the static ones
+        
+        if not self.dynamic_obs_enabled:
+            self.obstacles = self.static_obstacles.copy()
+            return
+
+        dynamic_added = 0
+        while dynamic_added < self.num_dynamic_obs:
+            # Pick a random state on the grid
+            rand_state = random.randint(0, self.no_of_states - 1)
+            
+            # Make sure it's not the start, goal, or already an obstacle
+            if (rand_state != self.start_state and 
+                rand_state != self.goal_state and 
+                rand_state not in self.obstacles):
+                
+                self.obstacles.append(rand_state)
+                dynamic_added += 1
 
     def epsilon_greedy(self, Q, state):
         a = random.random()
@@ -78,12 +106,6 @@ class QLBPW():
             self.buffer[self.pos] = experience
         
         self.pos = (self.pos + 1) % self.maxcap
-
-        # if len(self.buffer) >= self.maxcap:
-        #     self.buffer.pop(-1)
-        
-        # self.buffer.append([int(state), int(action), float(reward), int(next_state), float(td_error)])
-        # self.buffer.sort(key=lambda x: abs(x[4]), reverse=True)
 
     def er_update(self, Q, state, action, reward, next_state, td_error, sampled_idx, adjusted_lr):
         if not self.buffer:
@@ -147,7 +169,9 @@ class QLBPW():
         return next_state, reward, is_terminal
 
     def print_q_table(self, Q):
-        print("Learned Policy (Best Actions):")
+        print("\n" + "="*40)
+        print("LEARNED POLICY (Best Actions)")
+        print("="*40)
         action_symbols = {0: '↑', 1: '→', 2: '↓', 3: '←'}
         
         for row in range(self.grid_rows):
@@ -156,11 +180,11 @@ class QLBPW():
                 state = (row * self.grid_cols) + col
                 
                 if state == self.goal_state:
-                    row_str += " G \t"
+                    row_str += " 🏁 \t"
                 elif state == self.start_state:
-                    row_str += " S \t"
+                    row_str += " 🤖 \t"
                 elif state in self.obstacles:
-                    row_str += " X \t"
+                    row_str += " 🧱 \t"
                 else:
                     # If all values are 0, it hasn't explored this state successfully yet
                     if np.max(Q[state]) == 0:
@@ -170,23 +194,95 @@ class QLBPW():
                         row_str += f" {action_symbols[best_action]} \t"
             print(row_str)
             
-        print("\nMax Q-Values:")
+        print("\n" + "="*40)
+        print("MAX Q-VALUES")
+        print("="*40)
         for row in range(self.grid_rows):
             row_str = ""
             for col in range(self.grid_cols):
                 state = (row * self.grid_cols) + col
                 
                 if state == self.goal_state:
-                    row_str += " GOAL \t"
+                    row_str += " 🏁 \t"
                 elif state == self.start_state:
-                    row_str += " START \t"
+                    row_str += " 🤖 \t"
                 elif state in self.obstacles:
-                    row_str += " OBST \t"
+                    row_str += " 🧱 \t"
                 else:
-                    # Print the highest Q-value rounded to 2 decimal places
-                    row_str += f"{np.max(Q[state]):.2f}\t"
+                    max_val = np.max(Q[state])
+                    min_val = np.min(Q[state])
+                    
+                    # If the best move is 0.0 but a wall was hit, show the negative value!
+                    if max_val == 0.0 and min_val < 0:
+                        row_str += f"{min_val:.2f}\t"
+                    else:
+                        row_str += f"{max_val:.2f}\t"
             print(row_str)
         print("-" * 40)
+
+    def print_optimal_path(self, Q):
+        print("\n" + "="*40)
+        print("OPTIMAL PATH")
+        print("="*40)
+        
+        curr_state = self.start_state
+        path = [curr_state]
+        is_terminal = False
+        steps = 0
+        max_steps = self.no_of_states # Safety net to prevent infinite loops
+
+        # Trace the best actions from start to finish
+        while not is_terminal and steps < max_steps:
+            best_action = np.argmax(Q[curr_state])
+            next_state, _, is_terminal = self.take_step(curr_state, best_action)
+            path.append(next_state)
+            curr_state = next_state
+            steps += 1
+
+        if curr_state != self.goal_state:
+            print("<!> Warning: Agent got stuck and didn't reach the goal.")
+
+        # Print the visual grid
+        for row in range(self.grid_rows):
+            row_str = ""
+            for col in range(self.grid_cols):
+                state = (row * self.grid_cols) + col
+                
+                if state == self.start_state:
+                    row_str += " 🤖 \t"
+                elif state == self.goal_state:
+                    row_str += " 🏁 \t"
+                elif state in self.obstacles:
+                    row_str += " 🧱 \t"
+                elif state in path:
+                    row_str += " 🟢 \t" # Highlight the path with a green circle
+                else:
+                    row_str += " . \t"
+            print(row_str)
+            
+        print(f"\nSteps taken: {len(path) - 1}")
+        print("="*40)
+
+    def plot_learning_curves(self, steps, rewards):
+        print("Generating learning curves...")
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        
+        # Plot 1: Episode via steps
+        ax1.plot(steps, color='blue', alpha=0.7, linewidth=1)
+        ax1.set_title("Convergence: Episode via Steps")
+        ax1.set_xlabel("Episodes")
+        ax1.set_ylabel("Steps to Reach Goal / Terminate")
+        ax1.grid(True, linestyle='--', alpha=0.6)
+        
+        # Plot 2: Episode via reward
+        ax2.plot(rewards, color='green', alpha=0.7, linewidth=1)
+        ax2.set_title("Convergence: Episode via Reward")
+        ax2.set_xlabel("Episodes")
+        ax2.set_ylabel("Total Episode Reward")
+        ax2.grid(True, linestyle='--', alpha=0.6)
+        
+        plt.tight_layout()
+        plt.show()
 
     def simulate_qlbpw(self, start_time):
 
@@ -198,7 +294,12 @@ class QLBPW():
         optimal_time_recorded = False   
         expected_time = 27
         track_time = True
-        e_tracker = 20
+        e_tracker = 100
+
+        steps_per_episode = []
+        rewards_per_episode = []
+
+        self.generate_dynamic_obstacles()
 
         for e in range(self.episodes):
 
@@ -207,9 +308,10 @@ class QLBPW():
 
             # Other initializations
             self.gamma = 0.1 + (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # gamma scales
-            # self.epsilon = 0.9 - (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # epsilon scales DOWN
+            self.epsilon = 0.9 - (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # epsilon scales DOWN
             is_terminal = False
             steps_taken = 0 # tracker
+            episode_reward = 0
 
             while not is_terminal:
                 # Behavior Policy (ε-greedy)
@@ -220,6 +322,7 @@ class QLBPW():
 
                 # trackers
                 steps_taken += 1 
+                episode_reward += reward
                 if ((time.time() - start_time) >= float(expected_time)) and optimal_time_recorded == False and track_time:
                     print(f"<!> {expected_time} seconds has passed.")
                     track_time = False
@@ -248,7 +351,11 @@ class QLBPW():
                                        sampled_idx, adjusted_lr)
 
                 # s <- s'
-                curr_state = next_state        
+                curr_state = next_state
+
+            # == Graph ==
+            steps_per_episode.append(steps_taken)
+            rewards_per_episode.append(episode_reward)
 
             # tracker
             if curr_state == self.goal_state and steps_taken == optimal_path_length:
@@ -260,26 +367,31 @@ class QLBPW():
             # Episode tracker - prints progress every 100 episodes
             if (e + 1) % e_tracker == 0:
                 elapsed = time.time() - start_time
+                self.print_q_table(Q)
+                self.print_optimal_path(Q)
                 print(f"Episode {e + 1}/{self.episodes} | Elapsed: {elapsed:.2f}s | Steps: {steps_taken}")
-            # self.print_q_table(Q)
 
         # tracker
         self.print_q_table(Q)
+        self.print_optimal_path(Q)
         print(f"Total Episodes: {self.episodes}")
-        # print(self.buffer)
+        self.plot_learning_curves(steps_per_episode, rewards_per_episode)
 
 if __name__ == "__main__":
 
     # Freeze the randomness for consistent testing
-    # random.seed(40)
-    # np.random.seed(40)
+    # 42 -> 386
+    # random.seed(42)
+    # np.random.seed(42)
     
     a = QLBPW(
-        episodes=1000, 
+        episodes=3000, 
         alpha=0.1, 
         gamma=0.9, 
         epsilon=0.9, 
-        beta=0.3
+        beta=0.3,
+        dynamic_obs=True,
+        num_dynamic_obs=15
     )
     print("Starting simulation wib...")
     start_time = time.time() # Start the stopwatch
