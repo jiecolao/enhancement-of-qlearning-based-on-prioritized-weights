@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import time
 
 class QLBPW():
     def __init__(self, episodes, alpha, gamma, epsilon, beta):
@@ -16,8 +17,17 @@ class QLBPW():
         self.no_of_actions = len(actions)
         self.no_of_states = self.grid_rows * self.grid_cols
         self.start_state = 0
-        self.goal_state = 80
+        self.goal_state = 60
         self.obstacles = [
+            # 1, 4, 8,
+            # 15,
+            # 18, 21,
+            # 29, 32, 34, 35,
+            # 36, 39,
+            # 50, 51, 52,
+            # 55, 59, 61,
+            # 66, 68, 70, 
+            # 72
         ]
 
         # Prioritized Experience Replay (Empirical experience)
@@ -58,8 +68,8 @@ class QLBPW():
     def er_add_experience(self, state, action, reward, next_state, td_error):
         if len(self.buffer) >= self.maxcap:
             self.buffer.pop(-1)
-
-        self.buffer.append([state, action, reward, next_state, td_error])
+        
+        self.buffer.append([int(state), int(action), float(reward), int(next_state), float(td_error)])
 
         self.buffer.sort(key=lambda x: abs(x[4]), reverse=True)
 
@@ -69,10 +79,13 @@ class QLBPW():
 
         # 3. Calculate TD Target and new TD Error (Equations 6, 7, and 8)
         current_q = Q[state, action]
-        max_q_next = np.max(Q[next_state])
         
-        # Calculate the TD target
-        td_target = reward + self.gamma * max_q_next
+        # If the next state is the end of the line, there is no future Q-value!
+        if next_state == self.goal_state or next_state in self.obstacles:
+            td_target = reward
+        else:
+            max_q_next = np.max(Q[next_state])
+            td_target = reward + self.gamma * max_q_next
         
         # Calculate the new TD error (delta_j)
         new_td_error = td_target - current_q 
@@ -82,7 +95,7 @@ class QLBPW():
         Q[state, action] = (1 - adjusted_lr) * current_q + (adjusted_lr * td_target)
         
         # 5. Update the error in the buffer and re-sort
-        self.buffer[sampled_idx][4] = new_td_error
+        self.buffer[sampled_idx][4] = float(new_td_error)
         self.buffer.sort(key=lambda x: abs(x[4]), reverse=True)
         
         return Q
@@ -111,9 +124,11 @@ class QLBPW():
         if next_state == self.goal_state:
             reward = 1
             is_terminal = True
+        # elif next_state not in self.obstacles:
+        #     reward = 0.1
         elif next_state in self.obstacles: 
             reward = -1 # Fixing the paper's typo!
-            is_terminal = True # Often, hitting an obstacle ends the episode
+            # is_terminal = True # Often, hitting an obstacle ends the episode
         else:
             reward = 0
 
@@ -161,48 +176,93 @@ class QLBPW():
             print(row_str)
         print("-" * 40)
 
-    def simulate_qlbpw(self):
+    def simulate_qlbpw(self, start_time):
 
+        # Initialization
         Q = np.zeros((self.no_of_states, self.no_of_actions))
-        
-        is_terminal = False
+
+        # trackers
+        optimal_path_length = 16        
+        optimal_time_recorded = False   
+        expected_time = 27
+        track_time = True
 
         for e in range(self.episodes):
-            self.gamma = 0.1 + (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # gamma scales
+
+            # Initialization status S
             curr_state = self.start_state
+
+            # Other initializations
+            self.gamma = 0.1 + (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # gamma scales
+            # self.epsilon = 0.9 - (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # epsilon scales DOWN
             is_terminal = False
+            steps_taken = 0 # tracker
 
             while not is_terminal:
-                # 1. Choose an action
+                # Behavior Policy (ε-greedy)
                 action = self.epsilon_greedy(Q, curr_state)
 
-                # 2. Take the action and observe the environment
+                # Observe reward r and the next status s'
                 next_state, reward, is_terminal = self.take_step(curr_state, action)
 
-                # 3. Calculate initial TD Error to store in buffer
+                # trackers
+                steps_taken += 1 
+                if ((time.time() - start_time) >= float(expected_time)) and optimal_time_recorded == False and track_time:
+                    print(f"{expected_time} seconds has passed.")
+                    track_time = False
+
+                # Random Sampling
                 current_q = Q[curr_state, action]
-                max_q_next = np.max(Q[next_state])
-                td_target = reward + self.gamma * max_q_next
+                
+                if is_terminal:
+                    td_target = reward
+                else:
+                    max_q_next = np.max(Q[next_state])
+                    td_target = reward + self.gamma * max_q_next
+
                 td_error = td_target - current_q
 
-                # 4. Add to Experience Replay Buffer
                 self.er_add_experience(curr_state, action, reward, next_state, td_error)
 
-                # 5. Sample from buffer and update Q-table (if buffer has enough data)
+                # Buffer Checker
                 if len(self.buffer) > 0:
                     (sampled_state, sampled_action, sampled_reward, 
                      sampled_next_state, sampled_td_error, 
                      sampled_idx, adjusted_lr) = self.adjust_learning_rate()
-                    
+                    # Prioritized weight update Q
                     Q = self.er_update(Q, sampled_state, sampled_action, sampled_reward, 
                                        sampled_next_state, sampled_td_error, 
                                        sampled_idx, adjusted_lr)
 
-                # 6. Move to the next state
-                curr_state = next_state
-            
+                # s <- s'
+                curr_state = next_state        
+
+            # tracker
+            if curr_state == self.goal_state and steps_taken == optimal_path_length:
+                if not optimal_time_recorded:
+                    time_to_optimal = time.time() - start_time
+                    print(f"\n<!> Optimal path of {optimal_path_length} steps achieved at episode {e}! Time taken: {time_to_optimal:.2f} seconds\n")
+                    optimal_time_recorded = True
+            # self.print_q_table(Q)
+
+        # tracker
         self.print_q_table(Q)
+        print(f"Total Episodes: {self.episodes}")
+        # print(self.buffer)
 
 if __name__ == "__main__":
-    a = QLBPW(episodes=100, alpha=0.1, gamma=0.9, epsilon=0.9, beta=0.3)
-    a.simulate_qlbpw()
+
+    # Freeze the randomness for consistent testing
+    random.seed(42)
+    np.random.seed(42)
+    
+    a = QLBPW(episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.9, beta=0.3)
+    print("Starting simulation...")
+    start_time = time.time() # Start the stopwatch
+    
+    a.simulate_qlbpw(start_time) # <-- Pass the stopwatch in
+    
+    end_time = time.time() # Stop the stopwatch
+    
+    elapsed_time = end_time - start_time
+    # print(f"Simulation finished in {elapsed_time:.2f} seconds!")
