@@ -324,7 +324,7 @@ class QLBPW():
                 steps_taken += 1 
                 episode_reward += reward
                 if ((time.time() - start_time) >= float(expected_time)) and optimal_time_recorded == False and track_time:
-                    print(f"<!> {expected_time} seconds has passed.")
+                    # print(f"<!> {expected_time} seconds has passed.")
                     track_time = False
 
                 # Random Sampling
@@ -375,7 +375,7 @@ class QLBPW():
         self.print_q_table(Q)
         self.print_optimal_path(Q)
         print(f"Total Episodes: {self.episodes}")
-        self.plot_learning_curves(steps_per_episode, rewards_per_episode)
+        # self.plot_learning_curves(steps_per_episode, rewards_per_episode)
 
 if __name__ == "__main__":
 
@@ -385,12 +385,12 @@ if __name__ == "__main__":
     # np.random.seed(42)
     
     a = QLBPW(
-        episodes=3000, 
+        episodes=100, 
         alpha=0.1, 
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
-        dynamic_obs=True,
+        dynamic_obs=False,
         num_dynamic_obs=15
     )
     print("Starting simulation wib...")

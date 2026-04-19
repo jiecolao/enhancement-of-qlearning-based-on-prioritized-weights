@@ -1,0 +1,6 @@
+.vscode/settings.json
+src/__pycache__/agent.cpython-312.pyc
+src/__pycache__/environment.cpython-312.pyc
+src/__pycache__/helpers.cpython-312.pyc
+src/__pycache__/matplotlib.cpython-312.pyc
+tests/__pycache__/helpers.cpython-312.pyc
