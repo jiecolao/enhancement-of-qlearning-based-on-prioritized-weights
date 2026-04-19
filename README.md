@@ -1,2 +1,27 @@
-# qlearning-content-format-selection
-AN ENHANCEMENT OF Q-LEARNING ALGORITHM APPLIED IN OPTIMAL CONTENT FORMAT SELECTION WITH NON-STATIONARY ENVIRONMENT AND DISCRETE ACTION SPACES
+# Further Enhancement of Improved Q-learning Algorithm Applied to Dynamic Obstacle Avoidance and Path Planning
+
+This study further enhances the study of Chunlei Wang, Xiao Yang, and He Li named _Improved Q-Learning Applied to Dynamic Obstacle Avoidance and Path Planning_
+
+
+## Statement of the Problem
+
+1. State-space explosion
+```
+"As the scale of the problem increases, the Q-table in the Q-learning algorithm will also expand, increasing the algorithm’s complexity."
+```
+2. Local optima entrapment
+```
+"Q-learning has the problem of overestimation, which makes it impossible to choose the optimal action."
+```
+3. Overestimation Bias
+```
+"The Q-learning algorithm may produce a locally optimal solution rather than a globally optimal one, resulting in the agent not obtaining a higher reward."
+```
+
+## Objectives of the Study
+1. Deep Q-Learning
+2. Advanced exploration strategy 
+3. Double DQL
+
+
+Wang, C., et al. (2022). Improved Q-Learning Applied to Dynamic Obstacle Avoidance and Path Planning. https://ieeexplore.ieee.org/abstract/document/9870811
