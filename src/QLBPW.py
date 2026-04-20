@@ -43,9 +43,13 @@ class QLBPW():
         self.maxcap = 5000
         self.pos = 0
 
+        self.goalCount = 0
+        self.obstaclesCount = 0
+
     def generate_dynamic_obstacles(self):
         # Reset the obstacles list to just the static ones
-        
+        self.obstacles.clear()
+
         if not self.dynamic_obs_enabled:
             self.obstacles = self.static_obstacles.copy()
             return
@@ -69,9 +73,6 @@ class QLBPW():
             return random.randrange(self.no_of_actions)
         else: # exploitation
             return np.argmax(Q[state])
-    
-    def get_reward(self):
-        pass
 
     def adjust_learning_rate(self):
         b = len(self.buffer)
@@ -158,17 +159,21 @@ class QLBPW():
         if next_state == self.goal_state:
             reward = 1
             is_terminal = True
+            # print("GOAL")
+            self.goalCount += 1
         # elif next_state not in self.obstacles:
         #     reward = 0.1
         elif next_state in self.obstacles: 
             reward = -1 # Fixing the paper's typo!
+            # print("OBSTACLE")
+            self.obstaclesCount += 1
             # is_terminal = True # Often, hitting an obstacle ends the episode
         else:
             reward = 0
 
         return next_state, reward, is_terminal
 
-    def print_q_table(self, Q):
+    def print_actions(self, Q):
         print("\n" + "="*40)
         print("LEARNED POLICY (Best Actions)")
         print("="*40)
@@ -193,7 +198,10 @@ class QLBPW():
                         best_action = np.argmax(Q[state])
                         row_str += f" {action_symbols[best_action]} \t"
             print(row_str)
-            
+        print("="*40)
+        
+
+    def print_q_table(self, Q):
         print("\n" + "="*40)
         print("MAX Q-VALUES")
         print("="*40)
@@ -220,6 +228,48 @@ class QLBPW():
             print(row_str)
         print("-" * 40)
 
+    def print_grid(self):
+        print("\n" + "="*40)
+        print("ENVIRONMENT")
+        print("="*40)
+        for row in range(self.grid_rows):
+            row_str = ""
+            for col in range(self.grid_cols):
+                state = (row * self.grid_cols) + col
+                
+                if state == self.start_state:
+                    row_str += " 🤖 \t"
+                elif state == self.goal_state:
+                    row_str += " 🏁 \t"
+                elif state in self.obstacles:
+                    row_str += " 🧱 \t"
+                else:
+                    row_str += " . \t"
+            print(row_str)
+        print("="*40)
+
+    def print_agent_loc(self, curr_state):
+        print("\n" + "="*40)
+        print("AGENT LOCATION")
+        print("="*40)
+        for row in range(self.grid_rows):
+            row_str = ""
+            for col in range(self.grid_cols):
+                state = (row * self.grid_cols) + col
+                
+                if state == self.start_state:
+                    row_str += " S \t"
+                if state == curr_state:
+                    row_str += " 🤖 \t"
+                elif state == self.goal_state:
+                    row_str += " 🏁 \t"
+                elif state in self.obstacles:
+                    row_str += " 🧱 \t"
+                else:
+                    row_str += " . \t"
+            print(row_str)
+        print("="*40)
+
     def print_optimal_path(self, Q):
         print("\n" + "="*40)
         print("OPTIMAL PATH")
@@ -229,7 +279,7 @@ class QLBPW():
         path = [curr_state]
         is_terminal = False
         steps = 0
-        max_steps = self.no_of_states # Safety net to prevent infinite loops
+        max_steps = self.no_of_states * 2  # Allow more steps to navigate obstacles
 
         # Trace the best actions from start to finish
         while not is_terminal and steps < max_steps:
@@ -299,10 +349,12 @@ class QLBPW():
         steps_per_episode = []
         rewards_per_episode = []
 
-        self.generate_dynamic_obstacles()
+        # self.generate_dynamic_obstacles()
 
         for e in range(self.episodes):
-
+            self.generate_dynamic_obstacles()
+            # self.print_grid()
+            # print("Episode 1")
             # Initialization status S
             curr_state = self.start_state
 
@@ -316,6 +368,8 @@ class QLBPW():
             while not is_terminal:
                 # Behavior Policy (ε-greedy)
                 action = self.epsilon_greedy(Q, curr_state)
+                self.print_agent_loc(curr_state)
+                time.sleep(0.5)
 
                 # Observe reward r and the next status s'
                 next_state, reward, is_terminal = self.take_step(curr_state, action)
@@ -352,6 +406,7 @@ class QLBPW():
 
                 # s <- s'
                 curr_state = next_state
+                # self.print_q_table(Q)
 
             # == Graph ==
             steps_per_episode.append(steps_taken)
@@ -368,10 +423,16 @@ class QLBPW():
             if (e + 1) % e_tracker == 0:
                 elapsed = time.time() - start_time
                 self.print_q_table(Q)
-                self.print_optimal_path(Q)
+                # self.print_actions(Q)
+                # self.print_optimal_path(Q)
+                print(f"Goal Found: {self.goalCount}")
+                print(f"Obstacles Encountered: {self.obstaclesCount}")
                 print(f"Episode {e + 1}/{self.episodes} | Elapsed: {elapsed:.2f}s | Steps: {steps_taken}")
+                self.goalCount = 0
+                self.obstaclesCount = 0
 
         # tracker
+        self.print_actions(Q)
         self.print_q_table(Q)
         self.print_optimal_path(Q)
         print(f"Total Episodes: {self.episodes}")
@@ -385,12 +446,12 @@ if __name__ == "__main__":
     # np.random.seed(42)
     
     a = QLBPW(
-        episodes=100, 
+        episodes=1000, 
         alpha=0.1, 
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
-        dynamic_obs=False,
+        dynamic_obs=True,
         num_dynamic_obs=15
     )
     print("Starting simulation wib...")
