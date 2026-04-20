@@ -128,24 +128,81 @@ def add_obstacle(x1, y1):
         for y in range(y1, y2):
             dynamic_obstacles.add((x, y))
 
+def run_astar_test(config, is_dynamic=True):
+    """Run A* pathfinding test with given configuration"""
+    global dynamic_obstacles
+    
+    grid_size = config['grid_size']
+    start_point = config['start_point']
+    target_point = config['target_point']
+    cells = config['cells']
+    name = config['name']
+    
+    # Reset obstacles
+    dynamic_obstacles = config['initial_obstacles'].copy()
+    
+    # Add scaled obstacles
+    for obs in config['base_obstacles']:
+        x = obs[0] * cells
+        y = obs[1] * cells
+        add_obstacle(x, y)
+    
+    print(f"\n{'='*50}")
+    print(f"Testing: {name} ({grid_size}x{grid_size})")
+    print(f"{'='*50}\n")
+    
+    if is_dynamic:
+        # 1. Initial Plan
+        print("STAGE 1: INITIAL A* CALCULATION")
+        start_time = time.perf_counter()
+        initial_path = astar_pathfinding(grid_size, start_point, target_point, dynamic_obstacles)
+        end_time = time.perf_counter()
+        total_planning_time = end_time - start_time
+        visualize_grid(grid_size, start_point, target_point, dynamic_obstacles, initial_path, 
+                      f"{name} - Initial Path (Time: {total_planning_time:.5f}s)")
 
-grid_size = 45            
-start_point = (0, 0)     
-target_point = (32, 31)    
+        # 2. Agent moves
+        current_agent_index = min(26, len(initial_path) - 1) if initial_path else 0
+        current_pos = initial_path[current_agent_index] if initial_path else start_point
+        print("STAGE 2: AGENT STARTS MOVING")
+        visualize_grid(grid_size, current_pos, target_point, dynamic_obstacles, 
+                      initial_path[current_agent_index:] if initial_path else [], 
+                      f"{name} - Agent moved {current_agent_index} steps")
 
-dynamic_obstacles = {(10, 0)
-    # (1, 0), (4, 0), (8, 0),
-    # (6, 1),
-    # (0, 2), (3, 2),
-    # (2, 3), (5, 3), (7, 3), (8, 3), 
-    # (0, 4), (3, 4),
-    # (6, 5), (7, 5), (5, 5), 
-    # (1, 6), (5, 6), (7, 6), 
-    # (3, 7), (5, 7), (7, 7),
-    # (0, 8)
-}
+        # 3. Dynamic Obstacle Appears
+        print("STAGE 3: DYNAMIC OBSTACLE APPEARS!")
+        rand_obstacle = (5, 20)
+        add_obstacle(rand_obstacle[0], rand_obstacle[1])
+        print(f"🚨 ALERT: New obstacle at {rand_obstacle}!")
+        visualize_grid(grid_size, current_pos, target_point, dynamic_obstacles, 
+                      initial_path[current_agent_index:] if initial_path else [], 
+                      f"{name} - Old path invalid")
 
-obstacles = {
+        # 4. Replan
+        print("STAGE 4: A* FORCED TO REPLAN")
+        replan_start_time = time.perf_counter()
+        new_path = astar_pathfinding(grid_size, current_pos, target_point, dynamic_obstacles)
+        replan_end_time = time.perf_counter()
+        total_planning_time += (replan_end_time - replan_start_time)
+
+        visualize_grid(grid_size, current_pos, target_point, dynamic_obstacles, new_path, 
+                      f"{name} - Replanned (Time: {replan_end_time - replan_start_time:.5f}s)")
+        
+        print(f"Total Planning Time: {total_planning_time:.5f}s\n")
+    else:
+        start_time = time.perf_counter()
+        calculated_path = astar_pathfinding(grid_size, start_point, target_point, dynamic_obstacles)
+        end_time = time.perf_counter()
+        time_elapsed = end_time - start_time
+
+        visualize_grid(grid_size, start_point, target_point, dynamic_obstacles, calculated_path, 
+                      f"{name} - A* Pathfinding (Time: {time_elapsed:.5f}s)")
+        
+        print(f"Total Time: {time_elapsed:.5f}s\n")
+
+
+# Define test configurations
+BASE_OBSTACLES = {
     (1, 0), (4, 0), (8, 0),
     (6, 1),
     (0, 2), (3, 2),
@@ -157,61 +214,68 @@ obstacles = {
     (0, 8)
 }
 
-for i in obstacles:
-    x = i[0] * 5
-    y = i[1] * 5
-    add_obstacle(x, y)
+test_configs = [
+    {
+        'name': '45x45',
+        'grid_size': 45,
+        'start_point': (0, 0),
+        'target_point': (32, 31),
+        'cells': 5, # 5
+        'initial_obstacles': {(10, 0)},
+        'base_obstacles': {
+            (1, 0), (4, 0), (8, 0),
+            (6, 1),
+            (0, 2), (3, 2),
+            (2, 3), (5, 3), (7, 3), (8, 3), 
+            (0, 4), (3, 4),
+            (6, 5), (7, 5), (5, 5), 
+            (1, 6), (5, 6), (7, 6), 
+            (3, 7), (5, 7), (7, 7),
+            (0, 8)
+        }
+    },
+    {
+        'name': '10x10',
+        'grid_size': 10,
+        'start_point': (0, 0),
+        'target_point': (9, 9),
+        'cells': 5,
+        'initial_obstacles': {(1, 0)},
+        'base_obstacles': {
+            (1, 0)
+        }
+    },
+    {
+        'name': '15x15',
+        'grid_size': 15,
+        'start_point': (0, 0),
+        'target_point': (14, 14),
+        'cells': 2,
+        'initial_obstacles': {(7, 0)},
+        'base_obstacles': BASE_OBSTACLES
+    },
+    {
+        'name': '20x20',
+        'grid_size': 20,
+        'start_point': (0, 0),
+        'target_point': (19, 19),
+        'cells': 2,
+        'initial_obstacles': {(10, 0)},
+        'base_obstacles': BASE_OBSTACLES
+    },
+    {
+        'name': '240x240',
+        'grid_size': 240,
+        'start_point': (0, 0),
+        'target_point': (230, 230),
+        'cells': 5,
+        'initial_obstacles': {(50, 0)},
+        'base_obstacles': BASE_OBSTACLES
+    }
+]
 
-isDynamic = True
-
-if isDynamic:
-    # 1. Initial Plan
-    print("STAGE 1: INITIAL A* CALCULATION")
-    start_time = time.perf_counter()
-    initial_path = astar_pathfinding(grid_size, start_point, target_point, dynamic_obstacles)
-    end_time = time.perf_counter()
-    total_planning_time = end_time - start_time
-    visualize_grid(grid_size, start_point, target_point, dynamic_obstacles, initial_path, f"Initial Path Planned (Time: {total_planning_time:.5f}s)")
-
-    # 2. Agent moves a few steps along the path
-    current_agent_index = 26
-    current_pos = (8, 18)
-    print("STAGE 2: AGENT STARTS MOVING")
-    visualize_grid(grid_size, current_pos, target_point, dynamic_obstacles, initial_path[current_agent_index:], "Agent moved 26 steps. Path looks clear.")
-
-    # 3. Dynamic Obstacle Appears!
-    print("STAGE 3: DYNAMIC OBSTACLE APPEARS!")
-    rand_obstacle = (5, 20) 
-    add_obstacle(rand_obstacle[0], rand_obstacle[1])
-    print(f"🚨 ALERT: New obstacle randomly generated at {rand_obstacle}! Path is blocked.")
-    visualize_grid(grid_size, current_pos, target_point, dynamic_obstacles, initial_path[current_agent_index:], "Old path is now invalid.")
-
-    # 4. A* must REPLAN from scratch
-    print("STAGE 4: A* FORCED TO REPLAN ENTIRE ROUTE")
-    replan_start_time = time.perf_counter()
-    new_path = astar_pathfinding(grid_size, current_pos, target_point, dynamic_obstacles)
-    replan_end_time = time.perf_counter()
-    total_planning_time += (replan_end_time - replan_start_time)
-
-    visualize_grid(grid_size, current_pos, target_point, dynamic_obstacles, new_path, f"New Path Calculated (Replanning Time: {replan_end_time - replan_start_time:.5f}s)")
-
-    print("SUMMARY OF A* IN DYNAMIC ENVIRONMENT")
-    print(f"Total time spent calculating/recalculating: {total_planning_time:.5f} seconds")
-
-else:    
-    # Start the timer
-    start_time = time.perf_counter()
-
-    # Run the algorithm
-    calculated_path = astar_pathfinding(grid_size, start_point, target_point, dynamic_obstacles)
-
-    # Stop the timer
-    end_time = time.perf_counter()
-    time_elapsed = end_time - start_time
-
-    # Visualize the result
-    visualize_grid(grid_size, start_point, target_point, dynamic_obstacles, calculated_path, 
-                   f"A* Pathfinding (Time: {time_elapsed:.5f}s)")
-    
-    print("SUMMARY OF A* IN STATIC ENVIRONMENT")
-    print(f"Total time spent calculating/recalculating: {time_elapsed:.5f} seconds")
+# Run tests
+isDynamic = False
+run_astar_test(test_configs[0], is_dynamic=isDynamic)
+# for config in test_configs:
+#     run_astar_test(config, is_dynamic=isDynamic)
