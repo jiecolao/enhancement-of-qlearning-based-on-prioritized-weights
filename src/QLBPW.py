@@ -156,18 +156,15 @@ class QLBPW():
         # Calculate Reward and Terminal Status
         is_terminal = False
         
-        if next_state == self.goal_state:
+        # Check if next state is an obstacle - if so, stay in current state
+        if next_state in self.obstacles:
+            # next_state = state  # Don't move into the obstacle
+            reward = -1
+            self.obstaclesCount += 1
+        elif next_state == self.goal_state:
             reward = 1
             is_terminal = True
-            # print("GOAL")
             self.goalCount += 1
-        # elif next_state not in self.obstacles:
-        #     reward = 0.1
-        elif next_state in self.obstacles: 
-            reward = -1 # Fixing the paper's typo!
-            # print("OBSTACLE")
-            self.obstaclesCount += 1
-            # is_terminal = True # Often, hitting an obstacle ends the episode
         else:
             reward = 0
 
@@ -257,10 +254,10 @@ class QLBPW():
             for col in range(self.grid_cols):
                 state = (row * self.grid_cols) + col
                 
-                if state == self.start_state:
-                    row_str += " S \t"
                 if state == curr_state:
                     row_str += " 🤖 \t"
+                elif state == self.start_state:
+                    row_str += " S \t"
                 elif state == self.goal_state:
                     row_str += " 🏁 \t"
                 elif state in self.obstacles:
@@ -269,6 +266,7 @@ class QLBPW():
                     row_str += " . \t"
             print(row_str)
         print("="*40)
+        time.sleep(0.5)
 
     def print_optimal_path(self, Q):
         print("\n" + "="*40)
@@ -368,8 +366,7 @@ class QLBPW():
             while not is_terminal:
                 # Behavior Policy (ε-greedy)
                 action = self.epsilon_greedy(Q, curr_state)
-                self.print_agent_loc(curr_state)
-                time.sleep(0.5)
+                # self.print_agent_loc(curr_state)
 
                 # Observe reward r and the next status s'
                 next_state, reward, is_terminal = self.take_step(curr_state, action)
@@ -444,7 +441,10 @@ if __name__ == "__main__":
     # 42 -> 386
     # random.seed(42)
     # np.random.seed(42)
-    
+
+    # TODO: Modify environment (0, 0)
+    # TODO: Create several grid environment
+
     a = QLBPW(
         episodes=1000, 
         alpha=0.1, 
@@ -452,7 +452,7 @@ if __name__ == "__main__":
         epsilon=0.9, 
         beta=0.3,
         dynamic_obs=True,
-        num_dynamic_obs=15
+        num_dynamic_obs=3
     )
     print("Starting simulation wib...")
     start_time = time.time() # Start the stopwatch
