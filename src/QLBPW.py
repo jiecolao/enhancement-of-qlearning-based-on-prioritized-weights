@@ -20,20 +20,21 @@ class QLBPW():
         self.grid_cols = 9
         actions = ["up", "right", "down", "left"]
         self.no_of_actions = len(actions)
-        self.no_of_states = self.grid_rows * self.grid_cols
-        self.start_state = 0
-        self.goal_state = 60
+        
+        # State represented as (row, col) coordinates
+        self.start_state = (0, 0)
+        self.goal_state = (6, 6)
 
         self.static_obstacles = [
-            # 1, 4, 8,
-            # 15,
-            # 18, 21,
-            # 29, 32, 34, 35,
-            # 36, 39,
-            # 50, 51, 52,
-            # 55, 59, 61,
-            # 66, 68, 70, 
-            # 72
+            # (1, 0), (4, 0), (8, 0),
+            # (1, 1),
+            # (2, 0), (2, 3),
+            # (3, 2), (3, 5), (3, 7), (3, 8),
+            # (4, 0), (4, 3),
+            # (5, 6), (5, 7), (5, 5),
+            # (6, 1), (6, 5), (6, 7),
+            # (7, 3), (7, 5), (7, 7),
+            # (8, 0)
         ]
 
         self.obstacles = []
@@ -49,15 +50,17 @@ class QLBPW():
     def generate_dynamic_obstacles(self):
         # Reset the obstacles list to just the static ones
         self.obstacles.clear()
+        self.obstacles = self.static_obstacles.copy()
 
         if not self.dynamic_obs_enabled:
-            self.obstacles = self.static_obstacles.copy()
             return
 
         dynamic_added = 0
         while dynamic_added < self.num_dynamic_obs:
-            # Pick a random state on the grid
-            rand_state = random.randint(0, self.no_of_states - 1)
+            # Pick a random coordinate on the grid
+            rand_row = random.randint(0, self.grid_rows - 1)
+            rand_col = random.randint(0, self.grid_cols - 1)
+            rand_state = (rand_row, rand_col)
             
             # Make sure it's not the start, goal, or already an obstacle
             if (rand_state != self.start_state and 
@@ -72,7 +75,9 @@ class QLBPW():
         if a < self.epsilon: # exploration
             return random.randrange(self.no_of_actions)
         else: # exploitation
-            return np.argmax(Q[state])
+            # Get Q-values for this state (default to zeros if not visited)
+            q_values = Q.get(state, np.zeros(self.no_of_actions))
+            return np.argmax(q_values)
 
     def adjust_learning_rate(self):
         b = len(self.buffer)
@@ -97,7 +102,7 @@ class QLBPW():
 
     # Experience Replay
     def er_add_experience(self, state, action, reward, next_state, td_error):
-        experience = [int(state), int(action), float(reward), int(next_state), float(td_error)]
+        experience = [state, int(action), float(reward), next_state, float(td_error)]
         
         if len(self.buffer) < self.maxcap:
             # If the buffer isn't full yet, just append
@@ -113,12 +118,19 @@ class QLBPW():
             return Q
 
         # 3. Calculate TD Target and new TD Error (Equations 6, 7, and 8)
-        current_q = Q[state, action]
+        # Initialize state in Q-table if not present
+        if state not in Q:
+            Q[state] = np.zeros(self.no_of_actions)
+        
+        current_q = Q[state][action]
         
         # If the next state is the end of the line, there is no future Q-value!
         if next_state == self.goal_state or next_state in self.obstacles:
             td_target = reward
         else:
+            # Initialize next_state in Q-table if not present
+            if next_state not in Q:
+                Q[next_state] = np.zeros(self.no_of_actions)
             max_q_next = np.max(Q[next_state])
             td_target = reward + self.gamma * max_q_next
         
@@ -127,7 +139,7 @@ class QLBPW():
         
         # 4. Update the Q-Table (Equation 9)
         # We replace the standard alpha with our adjusted_lr (a_j)
-        Q[state, action] = (1 - adjusted_lr) * current_q + (adjusted_lr * td_target)
+        Q[state][action] = (1 - adjusted_lr) * current_q + (adjusted_lr * td_target)
         
         # 5. Update the error in the buffer and re-sort
         self.buffer[sampled_idx][4] = float(new_td_error)
@@ -136,9 +148,8 @@ class QLBPW():
         return Q
     
     def take_step(self, state, action):
-        # Convert 1D state index to 2D grid coordinates (row, col)
-        row = state // self.grid_cols
-        col = state % self.grid_cols
+        # State is already a (row, col) coordinate tuple
+        row, col = state
 
         # Actions: 0="up", 1="right", 2="down", 3="left"
         if action == 0:
@@ -150,15 +161,13 @@ class QLBPW():
         elif action == 3:
             col = max(0, col - 1)
 
-        # Convert back to 1D state index
-        next_state = (row * self.grid_cols) + col
+        next_state = (row, col)
 
         # Calculate Reward and Terminal Status
         is_terminal = False
         
-        # Check if next state is an obstacle - if so, stay in current state
+        # Check if next state is an obstacle
         if next_state in self.obstacles:
-            # next_state = state  # Don't move into the obstacle
             reward = -1
             self.obstaclesCount += 1
         elif next_state == self.goal_state:
@@ -179,7 +188,7 @@ class QLBPW():
         for row in range(self.grid_rows):
             row_str = ""
             for col in range(self.grid_cols):
-                state = (row * self.grid_cols) + col
+                state = (row, col)
                 
                 if state == self.goal_state:
                     row_str += " 🏁 \t"
@@ -188,8 +197,8 @@ class QLBPW():
                 elif state in self.obstacles:
                     row_str += " 🧱 \t"
                 else:
-                    # If all values are 0, it hasn't explored this state successfully yet
-                    if np.max(Q[state]) == 0:
+                    # If state not visited or all values are 0
+                    if state not in Q or np.max(Q[state]) == 0:
                         row_str += " . \t" 
                     else:
                         best_action = np.argmax(Q[state])
@@ -205,7 +214,7 @@ class QLBPW():
         for row in range(self.grid_rows):
             row_str = ""
             for col in range(self.grid_cols):
-                state = (row * self.grid_cols) + col
+                state = (row, col)
                 
                 if state == self.goal_state:
                     row_str += " 🏁 \t"
@@ -214,14 +223,17 @@ class QLBPW():
                 elif state in self.obstacles:
                     row_str += " 🧱 \t"
                 else:
-                    max_val = np.max(Q[state])
-                    min_val = np.min(Q[state])
-                    
-                    # If the best move is 0.0 but a wall was hit, show the negative value!
-                    if max_val == 0.0 and min_val < 0:
-                        row_str += f"{min_val:.2f}\t"
+                    if state not in Q:
+                        row_str += " . \t"
                     else:
-                        row_str += f"{max_val:.2f}\t"
+                        max_val = np.max(Q[state])
+                        min_val = np.min(Q[state])
+                        
+                        # If the best move is 0.0 but a wall was hit, show the negative value!
+                        if max_val == 0.0 and min_val < 0:
+                            row_str += f"{min_val:.2f}\t"
+                        else:
+                            row_str += f"{max_val:.2f}\t"
             print(row_str)
         print("-" * 40)
 
@@ -232,7 +244,7 @@ class QLBPW():
         for row in range(self.grid_rows):
             row_str = ""
             for col in range(self.grid_cols):
-                state = (row * self.grid_cols) + col
+                state = (row, col)
                 
                 if state == self.start_state:
                     row_str += " 🤖 \t"
@@ -252,7 +264,7 @@ class QLBPW():
         for row in range(self.grid_rows):
             row_str = ""
             for col in range(self.grid_cols):
-                state = (row * self.grid_cols) + col
+                state = (row, col)
                 
                 if state == curr_state:
                     row_str += " 🤖 \t"
@@ -277,10 +289,13 @@ class QLBPW():
         path = [curr_state]
         is_terminal = False
         steps = 0
-        max_steps = self.no_of_states * 2  # Allow more steps to navigate obstacles
+        max_steps = (self.grid_rows * self.grid_cols) * 2  # Allow more steps to navigate obstacles
 
         # Trace the best actions from start to finish
         while not is_terminal and steps < max_steps:
+            if curr_state not in Q:
+                # State not visited, can't determine best action
+                break
             best_action = np.argmax(Q[curr_state])
             next_state, _, is_terminal = self.take_step(curr_state, best_action)
             path.append(next_state)
@@ -294,7 +309,7 @@ class QLBPW():
         for row in range(self.grid_rows):
             row_str = ""
             for col in range(self.grid_cols):
-                state = (row * self.grid_cols) + col
+                state = (row, col)
                 
                 if state == self.start_state:
                     row_str += " 🤖 \t"
@@ -334,11 +349,11 @@ class QLBPW():
 
     def simulate_qlbpw(self, start_time):
 
-        # Initialization
-        Q = np.zeros((self.no_of_states, self.no_of_actions))
+        # Initialization - Q is now a dictionary mapping state -> action values
+        Q = {}
 
         # trackers
-        optimal_path_length = 16        
+        optimal_path_length = 12        
         optimal_time_recorded = False   
         expected_time = 27
         track_time = True
@@ -379,11 +394,18 @@ class QLBPW():
                     track_time = False
 
                 # Random Sampling
-                current_q = Q[curr_state, action]
+                # Initialize current state in Q if not present
+                if curr_state not in Q:
+                    Q[curr_state] = np.zeros(self.no_of_actions)
+                
+                current_q = Q[curr_state][action]
                 
                 if is_terminal:
                     td_target = reward
                 else:
+                    # Initialize next state in Q if not present
+                    if next_state not in Q:
+                        Q[next_state] = np.zeros(self.no_of_actions)
                     max_q_next = np.max(Q[next_state])
                     td_target = reward + self.gamma * max_q_next
 
