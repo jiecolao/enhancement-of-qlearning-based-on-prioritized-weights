@@ -4,7 +4,7 @@ import time
 import matplotlib.pyplot as plt
 
 class QLBPW():
-    def __init__(self, episodes, alpha, gamma, epsilon, beta, dynamic_obs, num_dynamic_obs=5):
+    def __init__(self, grid, start_state, goal_state, episodes, alpha, gamma, epsilon, beta, dynamic_obs, num_dynamic_obs=5):
         self.episodes = episodes
         self.initial_alpha = alpha
         self.gamma = gamma
@@ -16,26 +16,26 @@ class QLBPW():
         self.num_dynamic_obs = num_dynamic_obs
 
         # Environment
-        self.grid_rows = 9
-        self.grid_cols = 9
+        self.grid_rows = grid
+        self.grid_cols = grid
         actions = ["up", "right", "down", "left"]
         self.no_of_actions = len(actions)
         
-        # State represented as (row, col) coordinates
-        self.start_state = (0, 0)
-        self.goal_state = (6, 6)
+        # State represented as (x, y) coordinates where x is column, y is row
+        self.start_state = start_state
+        self.goal_state = goal_state
 
-        self.static_obstacles = [
+        self.static_obstacles = {
             # (1, 0), (4, 0), (8, 0),
-            # (1, 1),
-            # (2, 0), (2, 3),
-            # (3, 2), (3, 5), (3, 7), (3, 8),
-            # (4, 0), (4, 3),
-            # (5, 6), (5, 7), (5, 5),
-            # (6, 1), (6, 5), (6, 7),
-            # (7, 3), (7, 5), (7, 7),
-            # (8, 0)
-        ]
+            # (6, 1),
+            # (0, 2), (3, 2),
+            # (2, 3), (5, 3), (7, 3), (8, 3), 
+            # (0, 4), (3, 4),
+            # (6, 5), (7, 5), (5, 5), 
+            # (1, 6), (5, 6), (7, 6), 
+            # (3, 7), (5, 7), (7, 7),
+            # (0, 8)
+        }
 
         self.obstacles = []
 
@@ -57,10 +57,10 @@ class QLBPW():
 
         dynamic_added = 0
         while dynamic_added < self.num_dynamic_obs:
-            # Pick a random coordinate on the grid
-            rand_row = random.randint(0, self.grid_rows - 1)
-            rand_col = random.randint(0, self.grid_cols - 1)
-            rand_state = (rand_row, rand_col)
+            # Pick a random coordinate on the grid (x, y)
+            rand_x = random.randint(0, self.grid_cols - 1)
+            rand_y = random.randint(0, self.grid_rows - 1)
+            rand_state = (rand_x, rand_y)
             
             # Make sure it's not the start, goal, or already an obstacle
             if (rand_state != self.start_state and 
@@ -148,20 +148,20 @@ class QLBPW():
         return Q
     
     def take_step(self, state, action):
-        # State is already a (row, col) coordinate tuple
-        row, col = state
+        # State is a (x, y) coordinate tuple where x is column, y is row
+        x, y = state
 
         # Actions: 0="up", 1="right", 2="down", 3="left"
         if action == 0:
-            row = max(0, row - 1)
+            y = max(0, y - 1)
         elif action == 1:
-            col = min(self.grid_cols - 1, col + 1)
+            x = min(self.grid_cols - 1, x + 1)
         elif action == 2:
-            row = min(self.grid_rows - 1, row + 1)
+            y = min(self.grid_rows - 1, y + 1)
         elif action == 3:
-            col = max(0, col - 1)
+            x = max(0, x - 1)
 
-        next_state = (row, col)
+        next_state = (x, y)
 
         # Calculate Reward and Terminal Status
         is_terminal = False
@@ -170,6 +170,7 @@ class QLBPW():
         if next_state in self.obstacles:
             reward = -1
             self.obstaclesCount += 1
+            next_state = state
         elif next_state == self.goal_state:
             reward = 1
             is_terminal = True
@@ -185,10 +186,10 @@ class QLBPW():
         print("="*40)
         action_symbols = {0: '↑', 1: '→', 2: '↓', 3: '←'}
         
-        for row in range(self.grid_rows):
+        for y in range(self.grid_rows):
             row_str = ""
-            for col in range(self.grid_cols):
-                state = (row, col)
+            for x in range(self.grid_cols):
+                state = (x, y)
                 
                 if state == self.goal_state:
                     row_str += " 🏁 \t"
@@ -211,10 +212,10 @@ class QLBPW():
         print("\n" + "="*40)
         print("MAX Q-VALUES")
         print("="*40)
-        for row in range(self.grid_rows):
+        for y in range(self.grid_rows):
             row_str = ""
-            for col in range(self.grid_cols):
-                state = (row, col)
+            for x in range(self.grid_cols):
+                state = (x, y)
                 
                 if state == self.goal_state:
                     row_str += " 🏁 \t"
@@ -241,10 +242,10 @@ class QLBPW():
         print("\n" + "="*40)
         print("ENVIRONMENT")
         print("="*40)
-        for row in range(self.grid_rows):
+        for y in range(self.grid_rows):
             row_str = ""
-            for col in range(self.grid_cols):
-                state = (row, col)
+            for x in range(self.grid_cols):
+                state = (x, y)
                 
                 if state == self.start_state:
                     row_str += " 🤖 \t"
@@ -261,10 +262,10 @@ class QLBPW():
         print("\n" + "="*40)
         print("AGENT LOCATION")
         print("="*40)
-        for row in range(self.grid_rows):
+        for y in range(self.grid_rows):
             row_str = ""
-            for col in range(self.grid_cols):
-                state = (row, col)
+            for x in range(self.grid_cols):
+                state = (x, y)
                 
                 if state == curr_state:
                     row_str += " 🤖 \t"
@@ -306,10 +307,10 @@ class QLBPW():
             print("<!> Warning: Agent got stuck and didn't reach the goal.")
 
         # Print the visual grid
-        for row in range(self.grid_rows):
+        for y in range(self.grid_rows):
             row_str = ""
-            for col in range(self.grid_cols):
-                state = (row, col)
+            for x in range(self.grid_cols):
+                state = (x, y)
                 
                 if state == self.start_state:
                     row_str += " 🤖 \t"
@@ -353,7 +354,7 @@ class QLBPW():
         Q = {}
 
         # trackers
-        optimal_path_length = 12        
+        optimal_path_length = 16
         optimal_time_recorded = False   
         expected_time = 27
         track_time = True
@@ -458,30 +459,114 @@ class QLBPW():
         # self.plot_learning_curves(steps_per_episode, rewards_per_episode)
 
 if __name__ == "__main__":
-
     # Freeze the randomness for consistent testing
     # 42 -> 386
     # random.seed(42)
     # np.random.seed(42)
 
-    # TODO: Modify environment (0, 0)
-    # TODO: Create several grid environment
+    # TODO: Refine obstacle generation
 
+    BASE_OBSTACLES = {
+        (1, 0), (4, 0), (8, 0),
+        (6, 1),
+        (0, 2), (3, 2),
+        (2, 3), (5, 3), (7, 3), (8, 3), 
+        (0, 4), (3, 4),
+        (6, 5), (7, 5), (5, 5), 
+        (1, 6), (5, 6), (7, 6), 
+        (3, 7), (5, 7), (7, 7),
+        (0, 8)
+    }
+
+    environment = [
+        {
+            'name': '9x9',
+            'grid_size': 9,
+            'start_point': (0, 0),
+            'target_point': (1, 1),
+            'base_obstacles': BASE_OBSTACLES
+        },
+        {
+            'name': '10x10',
+            'grid_size': 10,
+            'start_point': (0, 0),
+            'target_point': (1, 1),
+            'base_obstacles': BASE_OBSTACLES
+        },
+        {
+            'name': '15x15',
+            'grid_size': 15,
+            'start_point': (0, 0),
+            'target_point': (1, 1),
+            'base_obstacles': BASE_OBSTACLES
+        },
+        {
+            'name': '20x20',
+            'grid_size': 20,
+            'start_point': (0, 0),
+            'target_point': (1, 1),
+            'base_obstacles': BASE_OBSTACLES
+        },
+    ]
+
+    # 9x9
     a = QLBPW(
+        environment=environment[0],
         episodes=1000, 
         alpha=0.1, 
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
-        dynamic_obs=True,
+        dynamic_obs=False,
         num_dynamic_obs=3
     )
+
+    # 10x10
+    b = QLBPW(
+        grid=10,
+        start_state= (0, 0),
+        goal_state= (6, 6),
+        episodes=1000, 
+        alpha=0.1, 
+        gamma=0.9, 
+        epsilon=0.9, 
+        beta=0.3,
+        dynamic_obs=False,
+        num_dynamic_obs=3
+    )
+
+    # 15x15
+    c = QLBPW(
+        grid=15,
+        start_state= (0, 0),
+        goal_state= (6, 6),
+        episodes=1000, 
+        alpha=0.1, 
+        gamma=0.9, 
+        epsilon=0.9, 
+        beta=0.3,
+        dynamic_obs=False,
+        num_dynamic_obs=3
+    )
+
+    # 20x20
+    d = QLBPW(
+        grid=20,
+        start_state= (0, 0),
+        goal_state= (19, 19),
+        episodes=1000, 
+        alpha=0.1, 
+        gamma=0.9, 
+        epsilon=0.9, 
+        beta=0.3,
+        dynamic_obs=False,
+        num_dynamic_obs=3
+    )
+
+
     print("Starting simulation wib...")
     start_time = time.time() # Start the stopwatch
-    
-    a.simulate_qlbpw(start_time) # <-- Pass the stopwatch in
-    
+    d.simulate_qlbpw(start_time) # <-- Pass the stopwatch in
     end_time = time.time() # Stop the stopwatch
-    
     elapsed_time = end_time - start_time
     # print(f"Simulation finished in {elapsed_time:.2f} seconds!")
