@@ -4,7 +4,7 @@ import time
 import matplotlib.pyplot as plt
 
 class QLBPW():
-    def __init__(self, grid, start_state, goal_state, episodes, alpha, gamma, epsilon, beta, dynamic_obs, num_dynamic_obs=5):
+    def __init__(self, environment, episodes, alpha, gamma, epsilon, beta, dynamic_obs, num_dynamic_obs=5):
         self.episodes = episodes
         self.initial_alpha = alpha
         self.gamma = gamma
@@ -16,26 +16,15 @@ class QLBPW():
         self.num_dynamic_obs = num_dynamic_obs
 
         # Environment
-        self.grid_rows = grid
-        self.grid_cols = grid
+        self.grid_rows = environment['grid']
+        self.grid_cols = environment['grid']
         actions = ["up", "right", "down", "left"]
         self.no_of_actions = len(actions)
         
         # State represented as (x, y) coordinates where x is column, y is row
-        self.start_state = start_state
-        self.goal_state = goal_state
-
-        self.static_obstacles = {
-            # (1, 0), (4, 0), (8, 0),
-            # (6, 1),
-            # (0, 2), (3, 2),
-            # (2, 3), (5, 3), (7, 3), (8, 3), 
-            # (0, 4), (3, 4),
-            # (6, 5), (7, 5), (5, 5), 
-            # (1, 6), (5, 6), (7, 6), 
-            # (3, 7), (5, 7), (7, 7),
-            # (0, 8)
-        }
+        self.start_state = environment['start']
+        self.goal_state = environment['goal']
+        self.static_obstacles = environment['base_obstacles']
 
         self.obstacles = []
 
@@ -50,7 +39,8 @@ class QLBPW():
     def generate_dynamic_obstacles(self):
         # Reset the obstacles list to just the static ones
         self.obstacles.clear()
-        self.obstacles = self.static_obstacles.copy()
+        # self.obstacles = self.static_obstacles.copy()
+        self.obstacles = list(self.static_obstacles)
 
         if not self.dynamic_obs_enabled:
             return
@@ -481,30 +471,30 @@ if __name__ == "__main__":
     environment = [
         {
             'name': '9x9',
-            'grid_size': 9,
-            'start_point': (0, 0),
-            'target_point': (1, 1),
+            'grid': 9,
+            'start': (0, 0),
+            'goal': (6, 6),
             'base_obstacles': BASE_OBSTACLES
         },
         {
             'name': '10x10',
-            'grid_size': 10,
-            'start_point': (0, 0),
-            'target_point': (1, 1),
+            'grid': 10,
+            'start': (0, 0),
+            'goal': (7, 7),
             'base_obstacles': BASE_OBSTACLES
         },
         {
             'name': '15x15',
-            'grid_size': 15,
-            'start_point': (0, 0),
-            'target_point': (1, 1),
+            'grid': 15,
+            'start': (0, 0),
+            'goal': (1, 1),
             'base_obstacles': BASE_OBSTACLES
         },
         {
             'name': '20x20',
-            'grid_size': 20,
-            'start_point': (0, 0),
-            'target_point': (1, 1),
+            'grid': 20,
+            'start': (0, 0),
+            'goal': (1, 1),
             'base_obstacles': BASE_OBSTACLES
         },
     ]
@@ -523,23 +513,19 @@ if __name__ == "__main__":
 
     # 10x10
     b = QLBPW(
-        grid=10,
-        start_state= (0, 0),
-        goal_state= (6, 6),
+        environment=environment[1],
         episodes=1000, 
         alpha=0.1, 
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
-        dynamic_obs=False,
-        num_dynamic_obs=3
+        dynamic_obs=True,
+        num_dynamic_obs=10
     )
 
-    # 15x15
+    # # 15x15
     c = QLBPW(
-        grid=15,
-        start_state= (0, 0),
-        goal_state= (6, 6),
+        environment=environment[2],
         episodes=1000, 
         alpha=0.1, 
         gamma=0.9, 
@@ -549,11 +535,9 @@ if __name__ == "__main__":
         num_dynamic_obs=3
     )
 
-    # 20x20
+    # # 20x20
     d = QLBPW(
-        grid=20,
-        start_state= (0, 0),
-        goal_state= (19, 19),
+        environment=environment[3],
         episodes=1000, 
         alpha=0.1, 
         gamma=0.9, 
@@ -566,7 +550,7 @@ if __name__ == "__main__":
 
     print("Starting simulation wib...")
     start_time = time.time() # Start the stopwatch
-    d.simulate_qlbpw(start_time) # <-- Pass the stopwatch in
+    a.simulate_qlbpw(start_time) # <-- Pass the stopwatch in
     end_time = time.time() # Stop the stopwatch
     elapsed_time = end_time - start_time
     # print(f"Simulation finished in {elapsed_time:.2f} seconds!")
