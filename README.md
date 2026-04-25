@@ -11,11 +11,11 @@ This study further enhances the study of Chunlei Wang, Xiao Yang, and He Li name
 ```
 2. Local optima entrapment
 ```
-"Q-learning has the problem of overestimation, which makes it impossible to choose the optimal action."
+"The Q-learning algorithm may produce a locally optimal solution rather than a globally optimal one, resulting in the agent not obtaining a higher reward."
 ```
 3. Overestimation Bias
 ```
-"The Q-learning algorithm may produce a locally optimal solution rather than a globally optimal one, resulting in the agent not obtaining a higher reward."
+"Q-learning has the problem of overestimation, which makes it impossible to choose the optimal action."
 ```
 
 ## Objectives of the Study
