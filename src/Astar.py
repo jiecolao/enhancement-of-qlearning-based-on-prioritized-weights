@@ -85,7 +85,7 @@ def print_environment(grid_size, current_pos, goal, obstacles, path, step_msg):
         print(f"{y}: \t{row_str}")
     print("========================================\n")
 
-def visualize_grid(isDynamic, grid_size, current_pos, goal, obstacles, path, title="Grid Visualization"):
+def visualize_grid(filename, grid_size, current_pos, goal, obstacles, path, title="Grid Visualization"):
     """Visualize the grid using Matplotlib"""
     fig, ax = plt.subplots(figsize=(10, 10))
     
@@ -124,11 +124,6 @@ def visualize_grid(isDynamic, grid_size, current_pos, goal, obstacles, path, tit
     figures_dir = os.path.join(os.path.dirname(__file__), 'figures')
     os.makedirs(figures_dir, exist_ok=True)
     
-    # Generate filename from title
-    # if isDynamic: filename = f"{grid_size}by{grid_size}_dynamic.png"
-    # else: filename = f"{grid_size}by{grid_size}.png"
-    if isDynamic: filename = f"{grid_size}by{grid_size}.png"
-    else: filename = f"{grid_size}by{grid_size}_dynamic.png"
     filepath = os.path.join(figures_dir, filename)
     
     # Save figure
@@ -175,15 +170,15 @@ def run_astar_test(config, is_dynamic=True, withVisual=False):
         end_time = time.perf_counter()
         total_planning_time = end_time - start_time
         print(f"\tInitial Path (Time: {total_planning_time:.5f}s)")
-        if withVisual: visualize_grid(is_dynamic, grid_size, start_point, target_point, dynamic_obstacles, initial_path, 
+        if withVisual: visualize_grid(f"Astar_{name}_dynamic_1.png", grid_size, start_point, target_point, dynamic_obstacles, initial_path, 
                         f"{name} - Initial Path (Time: {total_planning_time:.5f}s)")
 
         # 2. Agent moves
-        current_agent_index = min(26, len(initial_path) - 1) if initial_path else 0
+        current_agent_index = min(config['reroute'], len(initial_path) - 1) if initial_path else 0
         current_pos = initial_path[current_agent_index] if initial_path else start_point
         print("STAGE 2: AGENT STARTS MOVING")
         print(f"\tAgent moved {current_agent_index} steps")
-        if withVisual: visualize_grid(is_dynamic, grid_size, current_pos, target_point, dynamic_obstacles, 
+        if withVisual: visualize_grid(f"Astar_{name}_dynamic_2.png", grid_size, current_pos, target_point, dynamic_obstacles, 
                       initial_path[current_agent_index:] if initial_path else [], 
                       f"{name} - Agent moved {current_agent_index} steps")
 
@@ -193,7 +188,7 @@ def run_astar_test(config, is_dynamic=True, withVisual=False):
         add_obstacle(rand_obstacle[0] * cells, rand_obstacle[1] * cells, cells)
         print(f"\tNew obstacle at {rand_obstacle}!")
         print(f"\tOld path invalid")
-        if withVisual: visualize_grid(is_dynamic, grid_size, current_pos, target_point, dynamic_obstacles, 
+        if withVisual: visualize_grid(f"Astar_{name}_dynamic_3.png", grid_size, current_pos, target_point, dynamic_obstacles, 
                       initial_path[current_agent_index:] if initial_path else [], 
                       f"{name} - Old path invalid")
 
@@ -206,8 +201,8 @@ def run_astar_test(config, is_dynamic=True, withVisual=False):
         total_planning_time += (replan_end_time - replan_start_time)
         print(f"\tReplanned (Time: {replan_end_time - replan_start_time:.5f}s)")
         print(f"\nTotal Planning Time: {total_planning_time:.5f}s\n")
-        if withVisual: visualize_grid(is_dynamic, grid_size, current_pos, target_point, dynamic_obstacles, new_path, 
-                      f"{name} - Replanned (Time: {replan_end_time - replan_start_time:.5f}s)")
+        if withVisual: visualize_grid(f"Astar_{name}_dynamic_4.png", grid_size, current_pos, target_point, dynamic_obstacles, new_path, 
+                      f"{name} - Replanned (Time: {replan_end_time - replan_start_time:.5f}s) | Total Time: {total_planning_time:.5f}s")
         
     else:
         # For Dynamic
@@ -219,7 +214,7 @@ def run_astar_test(config, is_dynamic=True, withVisual=False):
         end_time = time.perf_counter()
         time_elapsed = end_time - start_time
         print(f"{name} - A* Pathfinding (Time: {time_elapsed:.5f}s)")
-        if withVisual: visualize_grid(is_dynamic, grid_size, start_point, target_point, dynamic_obstacles, calculated_path, 
+        if withVisual: visualize_grid(f"Astar_{name}.png", grid_size, start_point, target_point, dynamic_obstacles, calculated_path, 
                       f"{name} - A* Pathfinding (Time: {time_elapsed:.5f}s)")
         
         print(f"Total Time: {time_elapsed:.5f}s\n")
@@ -242,20 +237,21 @@ test_configs = [
     {
         'name': '9x9', # 9 * 5
         'grid_size': 45,
-        # 'start_point': (0, 0),
-        'start_point': (7, 18), # For Dynamic
+        'start_point': (0, 0),
+        # 'start_point': (7, 18), # For Dynamic
 
         'target_point': (32, 31), # Total Time (Charged): 0.09558s
 
         # 'target_point': (1, 1),
-        'cells': 5, # 5
+        'cells': 5, # 5,
+        'reroute': 26,
         'base_obstacles': BASE_OBSTACLES
     },
     {
         'name': '10x10', # 10 * 10
         'grid_size': 100,
-        # 'start_point': (0, 0),
-        'start_point': (16, 40), # For Dynamic
+        'start_point': (0, 0),
+        # 'start_point': (16, 40), # For Dynamic
 
         # 'target_point': (71, 70),
         # 'target_point': (71, 74), # 2 sec
@@ -265,29 +261,31 @@ test_configs = [
         # 'target_point': (1, 1),
 
         'cells': 11,
+        'reroute': 60,
         'base_obstacles': BASE_OBSTACLES
     },
     {
         'name': '15x15', # 15x15
         'grid_size': 135,
-        # 'start_point': (0, 0),
-        'start_point': (25, 55),  # For Dynamic
+        'start_point': (0, 0),
+        # 'start_point': (25, 55),  # For Dynamic
         
         # 'target_point': (97, 125),
         # 'target_point': (97, 108), # Total Time (Uncharged): 23.14693s
         # 'target_point': (97, 108), # Total Time (Charged): 13.11684s
         # 'target_point': (97, 107), # Total Time (Uncharged): 89.64658s
-        'target_point': (97, 107), # Total Time (Charged): 50.09718s
+        'target_point': (97, 106), # Total Time (Charged): 50.09718s
         # 'target_point': (1, 1),
         
         'cells': 15,
+        'reroute': 85,
         'base_obstacles': BASE_OBSTACLES
     },
     {
         'name': '20x20', # 20x20
         'grid_size': 180,
-        # 'start_point': (0, 0),
-        'start_point': (30, 75), # For Dynamic
+        'start_point': (0, 0),
+        # 'start_point': (30, 75), # For Dynamic
 
         # 'target_point': (130, 160),
         # 'target_point': (130, 148), # 38.49482
@@ -297,6 +295,7 @@ test_configs = [
         # 'target_point': (1, 1), 
 
         'cells': 20,
+        'reroute': 110,
         'base_obstacles': BASE_OBSTACLES
     }
 ]
