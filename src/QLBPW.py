@@ -2,6 +2,8 @@ import numpy as np
 import random
 import time
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import os
 
 class QLBPW():
     def __init__(self, environment, episodes, alpha, gamma, epsilon, beta, dynamic_obs, num_dynamic_obs=5):
@@ -73,7 +75,11 @@ class QLBPW():
         b = len(self.buffer)
 
         errors = np.array([abs(exp[4]) for exp in self.buffer])
-        ranks = np.argsort(np.argsort(-errors)) + 1
+        
+        # ranks = np.argsort(np.argsort(-errors)) + 1       # old
+        sorted_indices = np.argsort(-errors)                # new
+        ranks = np.empty_like(sorted_indices)
+        ranks[sorted_indices] = np.arange(1, b + 1)
 
         # ranks = np.arange(1, b + 1)
         p_j_unnormalized = 1.0 / ranks                    # Equation (10)
@@ -317,6 +323,73 @@ class QLBPW():
         print(f"\nSteps taken: {len(path) - 1}")
         print("="*40)
 
+    def visualize_learned_path(self, Q, title="Q-Learning Optimal Path"):
+        """Visualize the optimal path learned by Q-Learning using Matplotlib"""
+        # Trace the optimal path from Q-values
+        curr_state = self.start_state
+        path = [curr_state]
+        is_terminal = False
+        steps = 0
+        max_steps = (self.grid_rows * self.grid_cols) * 2
+
+        while not is_terminal and steps < max_steps:
+            if curr_state not in Q:
+                break
+            best_action = np.argmax(Q[curr_state])
+            next_state, _, is_terminal = self.take_step(curr_state, best_action)
+            path.append(next_state)
+            curr_state = next_state
+            steps += 1
+
+        # Create visualization
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+        # Create grid background
+        ax.set_xlim(-0.5, self.grid_cols - 0.5)
+        ax.set_ylim(self.grid_rows - 0.5, -0.5)  # Inverted Y-axis for proper orientation
+        ax.set_aspect('equal')
+        ax.grid(True, alpha=0.3)
+
+        # Draw obstacles
+        for obs in self.obstacles:
+            rect = patches.Rectangle((obs[0] - 0.5, obs[1] - 0.5), 1, 1,
+                                    linewidth=1, edgecolor='black', facecolor='black')
+            ax.add_patch(rect)
+
+        # Draw path
+        if path:
+            path_x = [p[0] for p in path]
+            path_y = [p[1] for p in path]
+            ax.plot(path_x, path_y, 'g-', linewidth=2, alpha=0.6, label='Learned Path')
+            ax.scatter(path_x, path_y, c='green', s=20, alpha=0.5)
+
+        # Draw goal
+        ax.scatter(*self.goal_state, c='red', s=300, marker='*', label='Goal', zorder=5)
+
+        # Draw start position
+        ax.scatter(*self.start_state, c='blue', s=200, marker='o', label='Start', zorder=5)
+
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_title(title)
+        ax.legend()
+        plt.tight_layout()
+
+        # Create figures directory if it doesn't exist
+        # figures_dir = os.path.join(os.path.dirname(__file__), 'figures')
+        # os.makedirs(figures_dir, exist_ok=True)
+
+        # # Generate filename based on grid size
+        # filename = f"{self.grid_rows}x{self.grid_cols}_qlbpw_path.png"
+        # filepath = os.path.join(figures_dir, filename)
+
+        # # Save figure
+        # plt.savefig(filepath, dpi=100, bbox_inches='tight')
+        # print(f"\nVisualization saved to: {filepath}")
+        print(f"Path length: {len(path) - 1} steps")
+        plt.show()
+        # plt.close()
+
     def plot_learning_curves(self, steps, rewards):
         print("Generating learning curves...")
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
@@ -354,6 +427,7 @@ class QLBPW():
         rewards_per_episode = []
 
         # self.generate_dynamic_obstacles()
+        s_time = 0
 
         for e in range(self.episodes):
             self.generate_dynamic_obstacles()
@@ -445,6 +519,7 @@ class QLBPW():
         self.print_actions(Q)
         self.print_q_table(Q)
         self.print_optimal_path(Q)
+        self.visualize_learned_path(Q, title=f"{self.grid_rows}x{self.grid_cols} Q-Learning Optimal Path")
         print(f"Total Episodes: {self.episodes}")
         # self.plot_learning_curves(steps_per_episode, rewards_per_episode)
 
@@ -480,7 +555,7 @@ if __name__ == "__main__":
             'name': '10x10',
             'grid': 10,
             'start': (0, 0),
-            'goal': (7, 7),
+            'goal': (9, 9),
             'base_obstacles': BASE_OBSTACLES
         },
         {
@@ -519,7 +594,7 @@ if __name__ == "__main__":
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
-        dynamic_obs=True,
+        dynamic_obs=False,
         num_dynamic_obs=10
     )
 
