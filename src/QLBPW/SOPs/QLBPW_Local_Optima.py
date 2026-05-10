@@ -562,13 +562,13 @@ if __name__ == "__main__":
             # 'base_obstacles': {(x + 5, y + 5) for (x, y) in BASE_OBSTACLES}
             'base_obstacles': {(-1, -1)}
         },
-        episodes=100, 
+        episodes=1000, 
         alpha=0.1, 
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
         dynamic_obs=True,
-        num_dynamic_obs=20
+        num_dynamic_obs=15
     )
 
 
