@@ -1,4 +1,5 @@
 import random
+import numpy as np
 from QLBPW.agent import Agent
 
 class Environment:
@@ -16,6 +17,7 @@ class Environment:
             ):
         self.agent = agent
         self.actions = agent.actions
+        self.episodes = agent.episodes
         
         self.grid = grid
         self.rows = grid-1
@@ -28,8 +30,51 @@ class Environment:
         self.num_dynamic_obs = num_dynamic_obs
         
     def simulate(self):
-        print(self.rows)
-        pass
+        Q = {}
+
+        for e in range(self.episodes):
+            self._generate_obstacles()
+
+            curr_state = self.start
+
+            self.gamma = 0.1 + (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # gamma scales
+            self.epsilon = 0.9 - (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # epsilon scales DOWN
+            
+            is_terminal = False
+            
+            while not is_terminal:
+                action = self.agent._epsilon_greedy(Q, curr_state)
+
+                next_state, reward, is_terminal = self._move(curr_state, action)
+
+                if curr_state not in Q:
+                    Q[curr_state] = np.zeros(self.no_of_actions)
+
+                current_q = Q[curr_state][action]
+
+                if is_terminal:
+                    td_target = reward
+                else:
+                    if next_state not in Q:
+                        Q[next_state] = np.zeros(self.no_of_actions)
+
+                    max_q_next = np.max(Q[next_state])
+                    td_target = reward + self.gamma * max_q_next
+
+                td_error = td_target - current_q
+
+                self.agent._experience_replay(curr_state, action, reward, next_state, td_error)
+
+                if len(self.buffer) > 0:
+                    (sampled_state, sampled_action, sampled_reward, 
+                     sampled_next_state, sampled_td_error, 
+                     sampled_idx, adjusted_lr) = self.agent._adjust_gamma()
+                    # Prioritized weight update Q
+                    Q = self.agent._update_q_table(Q, sampled_state, sampled_action, sampled_reward, 
+                                       sampled_next_state, sampled_td_error, 
+                                       sampled_idx, adjusted_lr, self.obstacles)
+                    
+                curr_state = next_state
 
     def _generate_obstacles(self):
         if not self.enable_obs:
