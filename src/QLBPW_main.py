@@ -5,6 +5,19 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
 
+def generate_base_obstacles(grid_size, num_obstacles, start_state, goal_state, seed=None, blocked=None):
+    rng = random.Random(seed)
+    blocked_states = set(blocked or [])
+    blocked_states.update([start_state, goal_state])
+
+    all_states = [(x, y) for x in range(grid_size) for y in range(grid_size)]
+    candidates = [state for state in all_states if state not in blocked_states]
+
+    if num_obstacles > len(candidates):
+        raise ValueError("num_obstacles exceeds available free cells")
+
+    return set(rng.sample(candidates, num_obstacles))
+
 class QLBPW():
     def __init__(self, environment, episodes, alpha, gamma, epsilon, beta, dynamic_obs, num_dynamic_obs=5):
         self.episodes = episodes
@@ -28,9 +41,8 @@ class QLBPW():
         self.goal_state = environment['goal']
         self.static_obstacles = environment['base_obstacles']
 
-        self.obstacles = []
+        self.obstacles = list(environment['base_obstacles'])
 
-        # Prioritized Experience Replay (Empirical experience)
         self.buffer = []
         self.maxcap = 5000
         self.pos = 0
@@ -427,12 +439,15 @@ class QLBPW():
         rewards_per_episode = []
 
         # self.generate_dynamic_obstacles()
-        s_time = 0
+        self.print_grid()
 
         for e in range(self.episodes):
-            self.generate_dynamic_obstacles()
+            # self.generate_dynamic_obstacles()             # NOTE: For totally dynamic environment
+            if e == 699 and self.dynamic_obs_enabled:       # NOTE: For simulated dynamic environment
+                self.obstacles.append((1, 4))
+                # self.obstacles.append((4, 2))
             # self.print_grid()
-            # print("Episode 1")
+            # print(f"Episode {e}")
             # Initialization status S
             curr_state = self.start_state
 
@@ -441,10 +456,11 @@ class QLBPW():
             self.epsilon = 0.9 - (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # epsilon scales DOWN
             is_terminal = False
             steps_taken = 0 # tracker
+            max_step = self.grid_cols * self.grid_cols ** 2
             episode_reward = 0
 
+            # while not is_terminal and steps_taken <= max_step:
             while not is_terminal:
-                # Behavior Policy (ε-greedy)
                 action = self.epsilon_greedy(Q, curr_state)
                 # self.print_agent_loc(curr_state)
 
@@ -500,7 +516,7 @@ class QLBPW():
             if curr_state == self.goal_state and steps_taken == optimal_path_length:
                 if not optimal_time_recorded:
                     time_to_optimal = time.time() - start_time
-                    print(f"<!> Optimal path of {optimal_path_length} steps achieved at episode {e}! Time taken: {time_to_optimal:.2f} seconds")
+                    # print(f"<!> Optimal path of {optimal_path_length} steps achieved at episode {e}! Time taken: {time_to_optimal:.2f} seconds")
                     optimal_time_recorded = True
             
             # Episode tracker - prints progress every 100 episodes
@@ -516,20 +532,17 @@ class QLBPW():
                 self.obstaclesCount = 0
 
         # tracker
-        self.print_actions(Q)
-        self.print_q_table(Q)
+        # self.print_actions(Q)
+        # self.print_q_table(Q)
         self.print_optimal_path(Q)
-        self.visualize_learned_path(Q, title=f"{self.grid_rows}x{self.grid_cols} Q-Learning Optimal Path")
+        self.visualize_learned_path(Q, title=f"{self.grid_rows}x{self.grid_cols} Q-Learning Optimal Path | Elapsed: {time.time() - start_time:.2f}s")
         print(f"Total Episodes: {self.episodes}")
         # self.plot_learning_curves(steps_per_episode, rewards_per_episode)
 
 if __name__ == "__main__":
-    # Freeze the randomness for consistent testing
     # 42 -> 386
     # random.seed(42)
     # np.random.seed(42)
-
-    # TODO: Refine obstacle generation
 
     BASE_OBSTACLES = {
         (1, 0), (4, 0), (8, 0),
@@ -549,28 +562,46 @@ if __name__ == "__main__":
             'grid': 9,
             'start': (0, 0),
             'goal': (6, 6),
-            'base_obstacles': BASE_OBSTACLES
+            'base_obstacles': BASE_OBSTACLES, # NOTE: When running static, use environment from the study
         },
         {
             'name': '10x10',
             'grid': 10,
             'start': (0, 0),
             'goal': (9, 9),
-            'base_obstacles': BASE_OBSTACLES
+            'base_obstacles': generate_base_obstacles(
+                grid_size=10,
+                num_obstacles=20,
+                start_state=(0, 0),
+                goal_state=(9, 9),
+                seed=None
+            )
         },
         {
             'name': '15x15',
             'grid': 15,
             'start': (0, 0),
-            'goal': (1, 1),
-            'base_obstacles': BASE_OBSTACLES
+            'goal': (14, 14),
+            'base_obstacles': generate_base_obstacles(
+                grid_size=15,
+                num_obstacles=30,
+                start_state=(0, 0),
+                goal_state=(14, 14),
+                seed=None
+            )
         },
         {
             'name': '20x20',
             'grid': 20,
             'start': (0, 0),
-            'goal': (1, 1),
-            'base_obstacles': BASE_OBSTACLES
+            'goal': (19, 19),
+            'base_obstacles': generate_base_obstacles(
+                grid_size=10,
+                num_obstacles=40,
+                start_state=(0, 0),
+                goal_state=(19, 19),
+                seed=None
+            )
         },
     ]
 
@@ -582,8 +613,8 @@ if __name__ == "__main__":
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
-        dynamic_obs=False,
-        num_dynamic_obs=3
+        dynamic_obs=True,
+        num_dynamic_obs=1
     )
 
     # 10x10
@@ -594,8 +625,8 @@ if __name__ == "__main__":
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
-        dynamic_obs=False,
-        num_dynamic_obs=10
+        dynamic_obs=True,
+        num_dynamic_obs=1
     )
 
     # # 15x15
@@ -606,8 +637,8 @@ if __name__ == "__main__":
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
-        dynamic_obs=False,
-        num_dynamic_obs=3
+        dynamic_obs=True,
+        num_dynamic_obs=1
     )
 
     # # 20x20
@@ -618,14 +649,22 @@ if __name__ == "__main__":
         gamma=0.9, 
         epsilon=0.9, 
         beta=0.3,
-        dynamic_obs=False,
-        num_dynamic_obs=3
+        dynamic_obs=True,
+        num_dynamic_obs=1
     )
 
-
-    print("Starting simulation wib...")
-    start_time = time.time() # Start the stopwatch
-    a.simulate_qlbpw(start_time) # <-- Pass the stopwatch in
-    end_time = time.time() # Stop the stopwatch
+    print(f"\nStarting simulation...")
+    start_time = time.time() 
+    a.simulate_qlbpw(start_time)
+    end_time = time.time() 
     elapsed_time = end_time - start_time
-    # print(f"Simulation finished in {elapsed_time:.2f} seconds!")
+
+    # simulations = [a, b, c, d]
+    # index = 0
+    # for i in simulations:
+    #     print(f"\nStarting {environment[index]["name"]} simulation...")
+    #     start_time = time.time() # Start the stopwatch
+    #     i.simulate_qlbpw(start_time) # <-- Pass the stopwatch in
+    #     end_time = time.time() # Stop the stopwatch
+    #     elapsed_time = end_time - start_time
+    #     index += 1
