@@ -1,107 +1,700 @@
 import numpy as np
+import random
 import time
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import os
+import sys
 
-def simulate_q_learning(grid_sizes=[5, 10, 20, 40, 80, 100]):
-    """
-    Simulate Q-Learning and visualize memory and execution time scaling.
-    """
-    print("Simulating Q-Learning complexity scaling...")
-    print(f"{'Grid Size':<12} | {'Total States':<12} | {'Q-Table Mem (Bytes)':<20} | {'Execution Time (s)':<18}")
-    print("-" * 70)
+class QLBPW():
+    def __init__(self, environment, episodes, alpha, gamma, epsilon, beta, dynamic_obs, num_dynamic_obs=5):
+        self.episodes = episodes
+        self.initial_alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.beta = beta # superparam 
 
-    alpha = 0.1
-    gamma = 0.9
-    epsilon = 0.1
-    episodes = 200
+        # New dynamic obstacle settings
+        self.dynamic_obs_enabled = dynamic_obs
+        self.num_dynamic_obs = num_dynamic_obs
 
-    grid_values = []
-    memory_values = []
-    time_values = []
-
-    for size in grid_sizes:
-        q_table = np.zeros((size, size, 4))
-        mem_size_bytes = q_table.nbytes
+        # Environment
+        self.grid_rows = environment['grid']
+        self.grid_cols = environment['grid']
+        actions = ["up", "right", "down", "left"]
+        self.no_of_actions = len(actions)
         
-        max_steps = size * size * 2 
-        
-        start_time = time.time()
-        
-        for _ in range(episodes):
-            state_x, state_y = 0, 0
-            goal_x, goal_y = size - 1, size - 1
+        # State represented as (x, y) coordinates where x is column, y is row
+        self.start_state = environment['start']
+        self.goal_state = environment['goal']
+        self.static_obstacles = environment['base_obstacles']
+
+        self.obstacles = []
+
+        # Prioritized Experience Replay (Empirical experience)
+        self.buffer = []
+        self.maxcap = 5000
+        self.pos = 0
+
+        self.goalCount = 0
+        self.obstaclesCount = 0
+
+    def generate_dynamic_obstacles(self):
+        # Reset the obstacles list to just the static ones
+        self.obstacles.clear()
+        # self.obstacles = self.static_obstacles.copy()
+        self.obstacles = list(self.static_obstacles)
+
+        if not self.dynamic_obs_enabled:
+            return
+
+        dynamic_added = 0
+        while dynamic_added < self.num_dynamic_obs:
+            # Pick a random coordinate on the grid (x, y)
+            rand_x = random.randint(0, self.grid_cols - 1)
+            rand_y = random.randint(0, self.grid_rows - 1)
+            rand_state = (rand_x, rand_y)
             
-            for _ in range(max_steps):
-                if np.random.rand() < epsilon:
-                    action = np.random.randint(4)
-                else:
-                    action = np.argmax(q_table[state_x, state_y])
-                    
-                next_x, next_y = state_x, state_y
-                if action == 0 and state_x > 0:          next_x -= 1
-                elif action == 1 and state_x < size - 1: next_x += 1
-                elif action == 2 and state_y > 0:        next_y -= 1
-                elif action == 3 and state_y < size - 1: next_y += 1
+            # Make sure it's not the start, goal, or already an obstacle
+            if (rand_state != self.start_state and 
+                rand_state != self.goal_state and 
+                rand_state not in self.obstacles):
                 
-                if next_x == goal_x and next_y == goal_y:
-                    reward = 100
-                    done = True
-                else:
-                    reward = -1
-                    done = False
-                    
-                best_next_action = np.argmax(q_table[next_x, next_y])
-                td_target = reward + gamma * q_table[next_x, next_y, best_next_action]
-                td_error = td_target - q_table[state_x, state_y, action]
-                q_table[state_x, state_y, action] += alpha * td_error
-                
-                state_x, state_y = next_x, next_y
-                
-                if done:
-                    break
-                    
-        elapsed_time = time.time() - start_time
-        
-        # Store metrics for plotting
-        grid_values.append(size)
-        memory_values.append(mem_size_bytes / (1024**2))  # Convert to MB
-        time_values.append(elapsed_time)
-        
-        print(f"{size}x{size:<10} | {size**2:<12} | {mem_size_bytes:<20,} | {elapsed_time:.4f}")
+                self.obstacles.append(rand_state)
+                dynamic_added += 1
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+    def epsilon_greedy(self, Q, state):
+        a = random.random()
+        if a < self.epsilon: # exploration
+            return random.randrange(self.no_of_actions)
+        else: # exploitation
+            # Get Q-values for this state (default to zeros if not visited)
+            q_values = Q.get(state, np.zeros(self.no_of_actions))
+            return np.argmax(q_values)
+
+    def adjust_learning_rate(self):
+        b = len(self.buffer)
+
+        errors = np.array([abs(exp[4]) for exp in self.buffer])
+        
+        # ranks = np.argsort(np.argsort(-errors)) + 1       # old
+        sorted_indices = np.argsort(-errors)                # new
+        ranks = np.empty_like(sorted_indices)
+        ranks[sorted_indices] = np.arange(1, b + 1)
+
+        # ranks = np.arange(1, b + 1)
+        p_j_unnormalized = 1.0 / ranks                    # Equation (10)
+        p_j = p_j_unnormalized / np.sum(p_j_unnormalized) # Normalize to create valid probabilities
+        
+        # Non-uniform random sampling based on the calculated weights
+        sampled_idx = np.random.choice(b, p=p_j)
+        state, action, reward, next_state, td_error = self.buffer[sampled_idx]
+        
+        # 2. Adjust the learning rate (alpha) using Equation (11)
+        p_sampled = p_j[sampled_idx]
+        # a_j = alpha / (b * p_j)^beta
+        adjusted_lr = self.initial_alpha / ((b * p_sampled) ** self.beta) 
+
+        return state, action, reward, next_state, td_error, sampled_idx, adjusted_lr
+
+    # Experience Replay
+    def er_add_experience(self, state, action, reward, next_state, td_error):
+        experience = [state, int(action), float(reward), next_state, float(td_error)]
+        
+        if len(self.buffer) < self.maxcap:
+            # If the buffer isn't full yet, just append
+            self.buffer.append(experience)
+        else:
+            # If full, overwrite the oldest memory
+            self.buffer[self.pos] = experience
+        
+        self.pos = (self.pos + 1) % self.maxcap
+
+    def er_update(self, Q, state, action, reward, next_state, td_error, sampled_idx, adjusted_lr):
+        if not self.buffer:
+            return Q
+
+        # 3. Calculate TD Target and new TD Error (Equations 6, 7, and 8)
+        # Initialize state in Q-table if not present
+        if state not in Q:
+            Q[state] = np.zeros(self.no_of_actions)
+        
+        current_q = Q[state][action]
+        
+        # If the next state is the end of the line, there is no future Q-value!
+        if next_state == self.goal_state or next_state in self.obstacles:
+            td_target = reward
+        else:
+            # Initialize next_state in Q-table if not present
+            if next_state not in Q:
+                Q[next_state] = np.zeros(self.no_of_actions)
+            max_q_next = np.max(Q[next_state])
+            td_target = reward + self.gamma * max_q_next
+        
+        # Calculate the new TD error (delta_j)
+        new_td_error = td_target - current_q 
+        
+        # 4. Update the Q-Table (Equation 9)
+        # We replace the standard alpha with our adjusted_lr (a_j)
+        Q[state][action] = (1 - adjusted_lr) * current_q + (adjusted_lr * td_target)
+        
+        # 5. Update the error in the buffer and re-sort
+        self.buffer[sampled_idx][4] = float(new_td_error)
+        # self.buffer.sort(key=lambda x: abs(x[4]), reverse=True)
+        
+        return Q
     
-    # Plot 1: Memory Consumption vs Grid Size
-    axes[0].plot(grid_values, memory_values, 'b-o', linewidth=2, markersize=6)
-    axes[0].set_xlabel('Grid Size', fontsize=12)
-    axes[0].set_ylabel('Memory (MB)', fontsize=12)
-    axes[0].set_title('Memory Consumption vs Grid Size', fontsize=13, fontweight='bold')
-    axes[0].grid(True, alpha=0.3)
-    
-    # Plot 2: Execution Time vs Grid Size
-    axes[1].plot(grid_values, time_values, 'r-s', linewidth=2, markersize=6)
-    axes[1].set_xlabel('Grid Size', fontsize=12)
-    axes[1].set_ylabel('Execution Time (s)', fontsize=12)
-    axes[1].set_title('Execution Time vs Grid Size', fontsize=13, fontweight='bold')
-    axes[1].grid(True, alpha=0.3)
-    
-    # Plot 3: Both on same graph with dual y-axis
-    ax3_1 = axes[2]
-    ax3_2 = ax3_1.twinx()
-    
-    line1 = ax3_1.plot(grid_values, memory_values, 'b-o', linewidth=2, markersize=6, label='Memory (MB)')
-    line2 = ax3_2.plot(grid_values, time_values, 'r-s', linewidth=2, markersize=6, label='Time (s)')
-    
-    ax3_1.set_xlabel('Grid Size', fontsize=12)
-    ax3_1.set_ylabel('Memory (MB)', color='b', fontsize=12)
-    ax3_2.set_ylabel('Execution Time (s)', color='r', fontsize=12)
-    ax3_1.tick_params(axis='y', labelcolor='b')
-    ax3_2.tick_params(axis='y', labelcolor='r')
-    ax3_1.set_title('Memory & Time vs Grid Size', fontsize=13, fontweight='bold')
-    ax3_1.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.show()
+    def take_step(self, state, action):
+        # State is a (x, y) coordinate tuple where x is column, y is row
+        x, y = state
+
+        # Actions: 0="up", 1="right", 2="down", 3="left"
+        if action == 0:
+            y = max(0, y - 1)
+        elif action == 1:
+            x = min(self.grid_cols - 1, x + 1)
+        elif action == 2:
+            y = min(self.grid_rows - 1, y + 1)
+        elif action == 3:
+            x = max(0, x - 1)
+
+        next_state = (x, y)
+
+        # Calculate Reward and Terminal Status
+        is_terminal = False
+        
+        # Check if next state is an obstacle
+        if next_state in self.obstacles:
+            reward = -1
+            self.obstaclesCount += 1
+            next_state = state
+        elif next_state == self.goal_state:
+            reward = 1
+            is_terminal = True
+            self.goalCount += 1
+        else:
+            reward = 0
+
+        return next_state, reward, is_terminal
+
+    def print_actions(self, Q):
+        print("\n" + "="*40)
+        print("LEARNED POLICY (Best Actions)")
+        print("="*40)
+        action_symbols = {0: '↑', 1: '→', 2: '↓', 3: '←'}
+        
+        for y in range(self.grid_rows):
+            row_str = ""
+            for x in range(self.grid_cols):
+                state = (x, y)
+                
+                if state == self.goal_state:
+                    row_str += " 🏁 \t"
+                elif state == self.start_state:
+                    row_str += " 🤖 \t"
+                elif state in self.obstacles:
+                    row_str += " 🧱 \t"
+                else:
+                    # If state not visited or all values are 0
+                    if state not in Q or np.max(Q[state]) == 0:
+                        row_str += " . \t" 
+                    else:
+                        best_action = np.argmax(Q[state])
+                        row_str += f" {action_symbols[best_action]} \t"
+            print(row_str)
+        print("="*40)
+        
+
+    def print_q_table(self, Q):
+        print("\n" + "="*40)
+        print("MAX Q-VALUES")
+        print("="*40)
+        for y in range(self.grid_rows):
+            row_str = ""
+            for x in range(self.grid_cols):
+                state = (x, y)
+                
+                if state == self.goal_state:
+                    row_str += " 🏁 \t"
+                elif state == self.start_state:
+                    row_str += " 🤖 \t"
+                elif state in self.obstacles:
+                    row_str += " 🧱 \t"
+                else:
+                    if state not in Q:
+                        row_str += " . \t"
+                    else:
+                        max_val = np.max(Q[state])
+                        min_val = np.min(Q[state])
+                        
+                        # If the best move is 0.0 but a wall was hit, show the negative value!
+                        if max_val == 0.0 and min_val < 0:
+                            row_str += f"{min_val:.2f}\t"
+                        else:
+                            row_str += f"{max_val:.2f}\t"
+            print(row_str)
+        print("-" * 40)
+
+    def print_grid(self):
+        print("\n" + "="*40)
+        print("ENVIRONMENT")
+        print("="*40)
+        for y in range(self.grid_rows):
+            row_str = ""
+            for x in range(self.grid_cols):
+                state = (x, y)
+                
+                if state == self.start_state:
+                    row_str += " 🤖 \t"
+                elif state == self.goal_state:
+                    row_str += " 🏁 \t"
+                elif state in self.obstacles:
+                    row_str += " 🧱 \t"
+                else:
+                    row_str += " . \t"
+            print(row_str)
+        print("="*40)
+
+    def print_agent_loc(self, curr_state):
+        print("\n" + "="*40)
+        print("AGENT LOCATION")
+        print("="*40)
+        for y in range(self.grid_rows):
+            row_str = ""
+            for x in range(self.grid_cols):
+                state = (x, y)
+                
+                if state == curr_state:
+                    row_str += " 🤖 \t"
+                elif state == self.start_state:
+                    row_str += " S \t"
+                elif state == self.goal_state:
+                    row_str += " 🏁 \t"
+                elif state in self.obstacles:
+                    row_str += " 🧱 \t"
+                else:
+                    row_str += " . \t"
+            print(row_str)
+        print("="*40)
+        time.sleep(0.5)
+
+    def print_optimal_path(self, Q):
+        print("\n" + "="*40)
+        print("OPTIMAL PATH")
+        print("="*40)
+        
+        curr_state = self.start_state
+        path = [curr_state]
+        is_terminal = False
+        steps = 0
+        max_steps = (self.grid_rows * self.grid_cols) * 2  # Allow more steps to navigate obstacles
+
+        # Trace the best actions from start to finish
+        while not is_terminal and steps < max_steps:
+            if curr_state not in Q:
+                # State not visited, can't determine best action
+                break
+            best_action = np.argmax(Q[curr_state])
+            next_state, _, is_terminal = self.take_step(curr_state, best_action)
+            path.append(next_state)
+            curr_state = next_state
+            steps += 1
+
+        if curr_state != self.goal_state:
+            print("<!> Warning: Agent got stuck and didn't reach the goal.")
+
+        # Print the visual grid
+        for y in range(self.grid_rows):
+            row_str = ""
+            for x in range(self.grid_cols):
+                state = (x, y)
+                
+                if state == self.start_state:
+                    row_str += " 🤖 \t"
+                elif state == self.goal_state:
+                    row_str += " 🏁 \t"
+                elif state in self.obstacles:
+                    row_str += " 🧱 \t"
+                elif state in path:
+                    row_str += " 🟢 \t" # Highlight the path with a green circle
+                else:
+                    row_str += " . \t"
+            print(row_str)
+            
+        print(f"\nSteps taken: {len(path) - 1}")
+        print("="*40)
+
+    def visualize_learned_path(self, Q, title="Q-Learning Optimal Path"):
+        """Visualize the optimal path learned by Q-Learning using Matplotlib"""
+        # Trace the optimal path from Q-values
+        curr_state = self.start_state
+        path = [curr_state]
+        is_terminal = False
+        steps = 0
+        max_steps = (self.grid_rows * self.grid_cols) * 2
+
+        while not is_terminal and steps < max_steps:
+            if curr_state not in Q:
+                break
+            best_action = np.argmax(Q[curr_state])
+            next_state, _, is_terminal = self.take_step(curr_state, best_action)
+            path.append(next_state)
+            curr_state = next_state
+            steps += 1
+
+        # Create visualization
+        fig, ax = plt.subplots(figsize=(10, 10))
+
+        # Create grid background
+        ax.set_xlim(-0.5, self.grid_cols - 0.5)
+        ax.set_ylim(self.grid_rows - 0.5, -0.5)  # Inverted Y-axis for proper orientation
+        ax.set_aspect('equal')
+        ax.grid(True, alpha=0.3)
+
+        # Draw obstacles
+        for obs in self.obstacles:
+            rect = patches.Rectangle((obs[0] - 0.5, obs[1] - 0.5), 1, 1,
+                                    linewidth=1, edgecolor='black', facecolor='black')
+            ax.add_patch(rect)
+
+        # Draw path
+        if path:
+            path_x = [p[0] for p in path]
+            path_y = [p[1] for p in path]
+            ax.plot(path_x, path_y, 'g-', linewidth=2, alpha=0.6, label='Learned Path')
+            ax.scatter(path_x, path_y, c='green', s=20, alpha=0.5)
+
+        # Draw goal
+        ax.scatter(*self.goal_state, c='red', s=300, marker='*', label='Goal', zorder=5)
+
+        # Draw start position
+        ax.scatter(*self.start_state, c='blue', s=200, marker='o', label='Start', zorder=5)
+
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_title(title)
+        ax.legend()
+        plt.tight_layout()
+
+        # Create figures directory if it doesn't exist
+        # figures_dir = os.path.join(os.path.dirname(__file__), 'figures')
+        # os.makedirs(figures_dir, exist_ok=True)
+
+        # # Generate filename based on grid size
+        # filename = f"{self.grid_rows}x{self.grid_cols}_qlbpw_path.png"
+        # filepath = os.path.join(figures_dir, filename)
+
+        # # Save figure
+        # plt.savefig(filepath, dpi=100, bbox_inches='tight')
+        # print(f"\nVisualization saved to: {filepath}")
+        print(f"Path length: {len(path) - 1} steps")
+        plt.show()
+        # plt.close()
+
+    def plot_learning_curves(self, steps, rewards):
+        print("Generating learning curves...")
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        
+        # Plot 1: Episode via steps
+        ax1.plot(steps, color='blue', alpha=0.7, linewidth=1)
+        ax1.set_title("Convergence: Episode via Steps")
+        ax1.set_xlabel("Episodes")
+        ax1.set_ylabel("Steps to Reach Goal / Terminate")
+        ax1.grid(True, linestyle='--', alpha=0.6)
+        
+        # Plot 2: Episode via reward
+        ax2.plot(rewards, color='green', alpha=0.7, linewidth=1)
+        ax2.set_title("Convergence: Episode via Reward")
+        ax2.set_xlabel("Episodes")
+        ax2.set_ylabel("Total Episode Reward")
+        ax2.grid(True, linestyle='--', alpha=0.6)
+        
+        plt.tight_layout()
+        plt.show()
+
+    def estimate_memory_bytes(self, Q):
+        total = sys.getsizeof(Q)
+
+        for state, q_values in Q.items():
+            total += sys.getsizeof(state)
+            total += sys.getsizeof(q_values)
+            if hasattr(q_values, "nbytes"):
+                total += q_values.nbytes
+
+        total += sys.getsizeof(self.buffer)
+        for exp in self.buffer:
+            total += sys.getsizeof(exp)
+            for item in exp:
+                total += sys.getsizeof(item)
+
+        total += sys.getsizeof(self.obstacles)
+        for obs in self.obstacles:
+            total += sys.getsizeof(obs)
+
+        return total
+
+    def plot_environment_profile(self, grid_sizes, memory_mb, time_s):
+        fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+
+        axes[0].plot(grid_sizes, memory_mb, 'b-o', linewidth=2, markersize=6)
+        axes[0].set_xlabel('Grid Size', fontsize=12)
+        axes[0].set_ylabel('Memory (MB)', fontsize=12)
+        axes[0].set_title('Memory vs Grid Size', fontsize=13, fontweight='bold')
+        axes[0].grid(True, alpha=0.3)
+
+        axes[1].plot(grid_sizes, time_s, 'r-s', linewidth=2, markersize=6)
+        axes[1].set_xlabel('Grid Size', fontsize=12)
+        axes[1].set_ylabel('Elapsed Time (s)', fontsize=12)
+        axes[1].set_title('Time vs Grid Size', fontsize=13, fontweight='bold')
+        axes[1].grid(True, alpha=0.3)
+
+        ax3_1 = axes[2]
+        ax3_2 = ax3_1.twinx()
+
+        ax3_1.plot(grid_sizes, memory_mb, 'b-o', linewidth=2, markersize=6, label='Memory (MB)')
+        ax3_2.plot(grid_sizes, time_s, 'r-s', linewidth=2, markersize=6, label='Time (s)')
+
+        ax3_1.set_xlabel('Grid Size', fontsize=12)
+        ax3_1.set_ylabel('Memory (MB)', color='b', fontsize=12)
+        ax3_2.set_ylabel('Elapsed Time (s)', color='r', fontsize=12)
+        ax3_1.tick_params(axis='y', labelcolor='b')
+        ax3_2.tick_params(axis='y', labelcolor='r')
+        ax3_1.set_title('Memory & Time vs Grid Size', fontsize=13, fontweight='bold')
+        ax3_1.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.show()
+
+    def simulate_qlbpw(self):
+
+        # Initialization - Q is now a dictionary mapping state -> action values
+        Q = {}
+
+        # trackers
+        optimal_path_length = 16
+        optimal_time_recorded = False   
+        expected_time = 27
+        track_time = True
+        e_tracker = 100
+
+        start_time = time.time()
+
+        steps_per_episode = []
+        rewards_per_episode = []
+
+        self.generate_dynamic_obstacles()
+        self.print_grid()
+        s_time = 0
+
+        for e in range(self.episodes):
+            # self.generate_dynamic_obstacles()
+            # self.print_grid()
+            # print("Episode 1")
+            # Initialization status S
+            curr_state = self.start_state
+
+            # Other initializations
+            self.gamma = 0.1 + (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # gamma scales
+            self.epsilon = 0.9 - (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # epsilon scales DOWN
+            is_terminal = False
+            steps_taken = 0 # tracker
+            episode_reward = 0
+
+            while not is_terminal:
+                # Behavior Policy (ε-greedy)
+                action = self.epsilon_greedy(Q, curr_state)
+                # self.print_agent_loc(curr_state)
+
+                # Observe reward r and the next status s'
+                next_state, reward, is_terminal = self.take_step(curr_state, action)
+
+                # trackers
+                steps_taken += 1 
+                episode_reward += reward
+                if ((time.time() - start_time) >= float(expected_time)) and optimal_time_recorded == False and track_time:
+                    # print(f"<!> {expected_time} seconds has passed.")
+                    track_time = False
+
+                # Random Sampling
+                # Initialize current state in Q if not present
+                if curr_state not in Q:
+                    Q[curr_state] = np.zeros(self.no_of_actions)
+                
+                current_q = Q[curr_state][action]
+                
+                if is_terminal:
+                    td_target = reward
+                else:
+                    # Initialize next state in Q if not present
+                    if next_state not in Q:
+                        Q[next_state] = np.zeros(self.no_of_actions)
+                    max_q_next = np.max(Q[next_state])
+                    td_target = reward + self.gamma * max_q_next
+
+                td_error = td_target - current_q
+
+                self.er_add_experience(curr_state, action, reward, next_state, td_error)
+
+                # Buffer Checker
+                if len(self.buffer) > 0:
+                    (sampled_state, sampled_action, sampled_reward, 
+                     sampled_next_state, sampled_td_error, 
+                     sampled_idx, adjusted_lr) = self.adjust_learning_rate()
+                    # Prioritized weight update Q
+                    Q = self.er_update(Q, sampled_state, sampled_action, sampled_reward, 
+                                       sampled_next_state, sampled_td_error, 
+                                       sampled_idx, adjusted_lr)
+
+                # s <- s'
+                curr_state = next_state
+                # self.print_q_table(Q)
+
+            # == Graph ==
+            steps_per_episode.append(steps_taken)
+            rewards_per_episode.append(episode_reward)
+
+            # tracker
+            if curr_state == self.goal_state and steps_taken == optimal_path_length:
+                if not optimal_time_recorded:
+                    time_to_optimal = time.time() - start_time
+                    # print(f"<!> Optimal path of {optimal_path_length} steps achieved at episode {e}! Time taken: {time_to_optimal:.2f} seconds")
+                    optimal_time_recorded = True
+            
+            # Episode tracker - prints progress every 100 episodes
+            if (e + 1) % e_tracker == 0:
+                elapsed = time.time() - start_time
+                # self.print_q_table(Q)
+                # self.print_actions(Q)
+                # self.print_optimal_path(Q)
+                # print(f"Goal Found: {self.goalCount}")
+                # print(f"Obstacles Encountered: {self.obstaclesCount}")
+                print(f"Episode {e + 1}/{self.episodes} | Elapsed: {elapsed:.2f}s | Steps: {steps_taken}")
+                self.goalCount = 0
+                self.obstaclesCount = 0
+
+        # tracker
+        # self.print_actions(Q)
+        # self.print_q_table(Q)
+        # self.print_optimal_path(Q)
+        # self.visualize_learned_path(Q, title=f"{self.grid_rows}x{self.grid_cols} Q-Learning Optimal Path")
+        total_elapsed = time.time() - start_time
+        mem_bytes = self.estimate_memory_bytes(Q)
+        print(f"Total Episodes: {self.episodes}")
+        # self.plot_learning_curves(steps_per_episode, rewards_per_episode)
+        return mem_bytes, total_elapsed
 
 if __name__ == "__main__":
-    simulate_q_learning()
+    # Freeze the randomness for consistent testing
+    # 42 -> 386
+    # random.seed(42)
+    # np.random.seed(42)
+
+    # TODO: Refine obstacle generation
+
+    BASE_OBSTACLES = {
+        (1, 0), (4, 0), (8, 0),
+        (6, 1),
+        (0, 2), (3, 2),
+        (2, 3), (5, 3), (7, 3), (8, 3), 
+        (0, 4), (3, 4),
+        (6, 5), (7, 5), (5, 5), 
+        (1, 6), (5, 6), (7, 6), 
+        (3, 7), (5, 7), (7, 7),
+        (0, 8)
+    }
+
+    environment = [
+        {
+            'name': '9x9',
+            'grid': 9,
+            'start': (0, 0),
+            'goal': (6, 6),
+            'base_obstacles': {}
+        },
+        {
+            'name': '10x10',
+            'grid': 10,
+            'start': (0, 0),
+            'goal': (9, 9),
+            'base_obstacles': {}
+        },
+        {
+            'name': '15x15',
+            'grid': 15,
+            'start': (0, 0),
+            'goal': (14, 14),
+            'base_obstacles': {}
+        },
+        {
+            'name': '20x20',
+            'grid': 20,
+            'start': (0, 0),
+            'goal': (19, 19),
+            'base_obstacles': {}
+        },
+    ]
+
+    # 9x9
+    a = QLBPW(
+        environment=environment[0],
+        episodes=1000, 
+        alpha=0.1, 
+        gamma=0.9, 
+        epsilon=0.9, 
+        beta=0.3,
+        dynamic_obs=True,
+        num_dynamic_obs=20
+    )
+
+    # 10x10
+    b = QLBPW(
+        environment=environment[1],
+        episodes=1000, 
+        alpha=0.1, 
+        gamma=0.9, 
+        epsilon=0.9, 
+        beta=0.3,
+        dynamic_obs=True,
+        num_dynamic_obs=20
+    )
+
+    # # 15x15
+    c = QLBPW(
+        environment=environment[2],
+        episodes=1000, 
+        alpha=0.1, 
+        gamma=0.9, 
+        epsilon=0.9, 
+        beta=0.3,
+        dynamic_obs=True,
+        num_dynamic_obs=30
+    )
+
+    # # 20x20
+    d = QLBPW(
+        environment=environment[3],
+        episodes=1000, 
+        alpha=0.1, 
+        gamma=0.9, 
+        epsilon=0.9, 
+        beta=0.3,
+        dynamic_obs=True,
+        num_dynamic_obs=40
+    )
+
+
+    agents = [a, b, c, d]
+    grid_sizes = []
+    memory_mb = []
+    time_s = []
+
+    print("Starting simulation sweep...")
+    for agent in agents:
+        print(f"\nRunning {agent.grid_rows}x{agent.grid_cols}...")
+        mem_bytes, elapsed = agent.simulate_qlbpw()
+        grid_sizes.append(agent.grid_rows)
+        memory_mb.append(mem_bytes / (1024 ** 2))
+        time_s.append(elapsed)
+
+    if grid_sizes:
+        a.plot_environment_profile(grid_sizes, memory_mb, time_s)
