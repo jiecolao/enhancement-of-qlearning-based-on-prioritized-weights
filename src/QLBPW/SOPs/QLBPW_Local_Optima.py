@@ -520,7 +520,7 @@ class QLBPW():
         self.print_q_table(Q)
         self.print_optimal_path(Q)
         self.visualize_learned_path(Q, title=f"{self.grid_rows}x{self.grid_cols} Q-Learning Optimal Path")
-        print(f"Total Episodes: {self.episodes}")
+        # print(f"Total Episodes: {self.episodes}")
         # self.plot_learning_curves(steps_per_episode, rewards_per_episode)
 
 if __name__ == "__main__":
@@ -562,7 +562,7 @@ if __name__ == "__main__":
             # 'base_obstacles': {(x + 5, y + 5) for (x, y) in BASE_OBSTACLES}
             'base_obstacles': {(-1, -1)}
         },
-        episodes=1000, 
+        episodes=100, 
         alpha=0.1, 
         gamma=0.9, 
         epsilon=0.9, 
