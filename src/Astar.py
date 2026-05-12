@@ -127,9 +127,9 @@ def visualize_grid(filename, grid_size, current_pos, goal, obstacles, path, titl
     filepath = os.path.join(figures_dir, filename)
     
     # Save figure
-    plt.savefig(filepath, dpi=100, bbox_inches='tight')
-    print(f"Figure saved to: {filepath}")
-    # plt.show()
+    # plt.savefig(filepath, dpi=100, bbox_inches='tight')
+    # print(f"Figure saved to: {filepath}")
+    plt.show()
 
 def add_obstacle(x1, y1, cells):
     """Add rectangular obstacle region from (x1, y1) to (x2, y2)"""
@@ -139,7 +139,7 @@ def add_obstacle(x1, y1, cells):
         for y in range(y1, y2):
             dynamic_obstacles.add((x, y))
 
-def run_astar_test(config, is_dynamic=True, withVisual=False):
+def run_astar_test(config, is_dynamic=True, withVisual=False, runs=5):
     """Run A* pathfinding test with given configuration"""
     global dynamic_obstacles
     
@@ -149,75 +149,66 @@ def run_astar_test(config, is_dynamic=True, withVisual=False):
     cells = config['cells']
     name = config['name']
     
-    # Reset obstacles
-    dynamic_obstacles = {(-1, -1)}
-    
-    # Add scaled obstacles
-    for obs in config['base_obstacles']:
-        x = obs[0] * cells
-        y = obs[1] * cells
-        add_obstacle(x, y, cells)
-    
     print(f"\n{'='*50}")
     print(f"Testing: {name} ({grid_size}x{grid_size})")
     print(f"{'='*50}\n")
-    
-    if is_dynamic:
-        # 1. Initial Plan
-        print("STAGE 1: INITIAL A* CALCULATION")
-        start_time = time.perf_counter()
-        initial_path = astar_pathfinding(grid_size, start_point, target_point, dynamic_obstacles)
-        end_time = time.perf_counter()
-        total_planning_time = end_time - start_time
-        print(f"\tInitial Path (Time: {total_planning_time:.5f}s)")
-        if withVisual: visualize_grid(f"Astar_{name}_dynamic_1.png", grid_size, start_point, target_point, dynamic_obstacles, initial_path, 
-                        f"{name} - Initial Path (Time: {total_planning_time:.5f}s)")
 
-        # 2. Agent moves
-        current_agent_index = min(config['reroute'], len(initial_path) - 1) if initial_path else 0
-        current_pos = initial_path[current_agent_index] if initial_path else start_point
-        print("STAGE 2: AGENT STARTS MOVING")
-        print(f"\tAgent moved {current_agent_index} steps")
-        if withVisual: visualize_grid(f"Astar_{name}_dynamic_2.png", grid_size, current_pos, target_point, dynamic_obstacles, 
-                      initial_path[current_agent_index:] if initial_path else [], 
-                      f"{name} - Agent moved {current_agent_index} steps")
+    total_times = []
 
-        # 3. Dynamic Obstacle Appears
-        print("STAGE 3: DYNAMIC OBSTACLE APPEARS!")
-        rand_obstacle = (1, 4)
-        add_obstacle(rand_obstacle[0] * cells, rand_obstacle[1] * cells, cells)
-        print(f"\tNew obstacle at {rand_obstacle}!")
-        print(f"\tOld path invalid")
-        if withVisual: visualize_grid(f"Astar_{name}_dynamic_3.png", grid_size, current_pos, target_point, dynamic_obstacles, 
-                      initial_path[current_agent_index:] if initial_path else [], 
-                      f"{name} - Old path invalid")
+    for run_index in range(runs):
+        # Reset obstacles for each run
+        dynamic_obstacles = {(-1, -1)}
 
-        # 4. Replan
-        print("STAGE 4: A* FORCED TO REPLAN")
-        print("\tCalculationg Replanned Time...")
-        replan_start_time = time.perf_counter()
-        new_path = astar_pathfinding(grid_size, current_pos, target_point, dynamic_obstacles)
-        replan_end_time = time.perf_counter()
-        total_planning_time += (replan_end_time - replan_start_time)
-        print(f"\tReplanned (Time: {replan_end_time - replan_start_time:.5f}s)")
-        print(f"\nTotal Planning Time: {total_planning_time:.5f}s\n")
-        if withVisual: visualize_grid(f"Astar_{name}_dynamic_4.png", grid_size, current_pos, target_point, dynamic_obstacles, new_path, 
-                      f"{name} - Replanned (Time: {replan_end_time - replan_start_time:.5f}s) | Total Time: {total_planning_time:.5f}s")
-        
-    else:
-        # For Dynamic
-        rand_obstacle = (1, 4)
-        add_obstacle(rand_obstacle[0] * cells, rand_obstacle[1] * cells, cells)
+        # Add scaled obstacles
+        for obs in config['base_obstacles']:
+            x = obs[0] * cells
+            y = obs[1] * cells
+            add_obstacle(x, y, cells)
 
-        start_time = time.perf_counter()
-        calculated_path = astar_pathfinding(grid_size, start_point, target_point, dynamic_obstacles)
-        end_time = time.perf_counter()
-        time_elapsed = end_time - start_time
-        print(f"{name} - A* Pathfinding (Time: {time_elapsed:.5f}s)")
-        if withVisual: visualize_grid(f"Astar_{name}.png", grid_size, start_point, target_point, dynamic_obstacles, calculated_path, 
-                      f"{name} - A* Pathfinding (Time: {time_elapsed:.5f}s)")
-        
-        print(f"Total Time: {time_elapsed:.5f}s\n")
+        if is_dynamic:
+            # 1. Initial Plan
+            print("STAGE 1: START A* CALCULATION")
+            start_time = time.perf_counter()
+            initial_path = astar_pathfinding(grid_size, start_point, target_point, dynamic_obstacles)
+
+            # 2. Agent moves
+            current_agent_index = min(config['reroute'], len(initial_path) - 1) if initial_path else 0
+            current_pos = initial_path[current_agent_index] if initial_path else start_point
+            print("STAGE 2: AGENT STARTS MOVING")
+            print(f"\tAgent moved {current_agent_index} steps")
+
+            # 3. Dynamic Obstacle Appears
+            print("STAGE 3: DYNAMIC OBSTACLE APPEARS!")
+            rand_obstacle = (1, 4)
+            add_obstacle(rand_obstacle[0] * cells, rand_obstacle[1] * cells, cells)
+            print(f"\tNew obstacle at {rand_obstacle}!")
+            print("\tOld path invalid")
+
+            # 4. Replan
+            print("STAGE 4: A* FORCED TO REPLAN")
+            print("\tCalculationg Replanned Time...")
+            new_path = astar_pathfinding(grid_size, current_pos, target_point, dynamic_obstacles)
+
+            end_time = time.perf_counter()
+            total_planning_time = end_time - start_time
+            total_times.append(total_planning_time)
+            print(f"\tInitial Path (Time: {total_planning_time:.5f}s)")
+            if withVisual and run_index == runs - 1:
+                visualize_grid(f"Astar_{name}_dynamic_1.png", grid_size, start_point, target_point, dynamic_obstacles, new_path, 
+                               f"{name} - Path (Time: {total_planning_time:.5f}s)")
+        else:
+            start_time = time.perf_counter()
+            calculated_path = astar_pathfinding(grid_size, start_point, target_point, dynamic_obstacles)
+            end_time = time.perf_counter()
+            time_elapsed = end_time - start_time
+            total_times.append(time_elapsed)
+            print(f"{name} - A* Pathfinding (Time: {time_elapsed:.5f}s)")
+            if withVisual and run_index == runs - 1:
+                visualize_grid(f"Astar_{name}.png", grid_size, start_point, target_point, dynamic_obstacles, calculated_path, 
+                               f"{name} - A* Pathfinding (Average Time: {time_elapsed:.5f}s)")
+
+    average_time = sum(total_times) / len(total_times) if total_times else 0.0
+    print(f"Average Total Time ({runs} runs): {average_time:.5f}s\n")
 
 
 # Define test configurations
@@ -236,13 +227,18 @@ BASE_OBSTACLES = {
 test_configs = [
     {
         'name': '9x9', # 9 * 5
+        'grid_size': 729,
+        'start_point': (0, 0),
+        'target_point': (32, 31), # Total Time (Charged): 0.09558s
+        'cells': 81, # 5,
+        'reroute': 26,
+        'base_obstacles': BASE_OBSTACLES
+    },
+    {
+        'name': '9x9', # 9 * 5
         'grid_size': 45,
         'start_point': (0, 0),
-        # 'start_point': (7, 18), # For Dynamic
-
         'target_point': (32, 31), # Total Time (Charged): 0.09558s
-
-        # 'target_point': (1, 1),
         'cells': 5, # 5,
         'reroute': 26,
         'base_obstacles': BASE_OBSTACLES
@@ -251,15 +247,7 @@ test_configs = [
         'name': '10x10', # 10 * 10
         'grid_size': 100,
         'start_point': (0, 0),
-        # 'start_point': (16, 40), # For Dynamic
-
-        # 'target_point': (71, 70),
-        # 'target_point': (71, 74), # 2 sec
-        # 'target_point': (71, 74), # 51 sec
-        # 'target_point': (71, 75), # 23.53959
         'target_point': (71, 75), # Total Time (Charged): 12 sec
-        # 'target_point': (1, 1),
-
         'cells': 11,
         'reroute': 60,
         'base_obstacles': BASE_OBSTACLES
@@ -268,15 +256,7 @@ test_configs = [
         'name': '15x15', # 15x15
         'grid_size': 135,
         'start_point': (0, 0),
-        # 'start_point': (25, 55),  # For Dynamic
-        
-        # 'target_point': (97, 125),
-        # 'target_point': (97, 108), # Total Time (Uncharged): 23.14693s
-        # 'target_point': (97, 108), # Total Time (Charged): 13.11684s
-        # 'target_point': (97, 107), # Total Time (Uncharged): 89.64658s
-        'target_point': (97, 106), # Total Time (Charged): 50.09718s
-        # 'target_point': (1, 1),
-        
+        'target_point': (97, 107), # Total Time (Charged): 50.09718s
         'cells': 15,
         'reroute': 85,
         'base_obstacles': BASE_OBSTACLES
@@ -285,15 +265,7 @@ test_configs = [
         'name': '20x20', # 20x20
         'grid_size': 180,
         'start_point': (0, 0),
-        # 'start_point': (30, 75), # For Dynamic
-
-        # 'target_point': (130, 160),
-        # 'target_point': (130, 148), # 38.49482
-        # 'target_point': (130, 147), # 57.33920
-        # 'target_point': (130, 147), # Total Time (Charged): 60.16368s
         'target_point': (130, 146), # Total Time (Charged): 283.35224s
-        # 'target_point': (1, 1), 
-
         'cells': 20,
         'reroute': 110,
         'base_obstacles': BASE_OBSTACLES
@@ -301,6 +273,6 @@ test_configs = [
 ]
 
 # Run tests
-run_astar_test(test_configs[3], is_dynamic=False, withVisual=True)
+run_astar_test(test_configs[0], is_dynamic=False, withVisual=True, runs=1)
 # for config in test_configs:
 #     run_astar_test(config, is_dynamic=False, withVisual=True)
