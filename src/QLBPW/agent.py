@@ -1,3 +1,4 @@
+from experience import Experience 
 import numpy as np
 import random
 
@@ -10,7 +11,7 @@ class Agent:
             beta: float, 
             epsilon: float, 
             
-            actions: list =['up', 'right', 'down', 'left'],
+            actions: list = ['up', 'right', 'down', 'left'],
 
             max_buffer: int = 5000,
             ):
@@ -23,9 +24,10 @@ class Agent:
         self.actions = actions
         self.no_of_actions = len(actions)
 
-        self.pos = 0
-        self.buffer = []
-        self.max_buffer = max_buffer
+        self.experience = Experience(
+                            max_buffer, 
+                            alpha, 
+                            beta)
 
     def _epsilon_greedy(self, Q, state):
         a = random.random()
@@ -38,21 +40,18 @@ class Agent:
             q_values = Q.get(state, np.zeros(self.no_of_actions))
             return np.argmax(q_values)
 
-    def _adjust_gamma(self):
-        pass
-
-    def _experience_replay(self, state, action, reward, next_state, td_error):
-        experience = (state, action, reward, next_state, td_error)
-
-        if len(self.buffer) < self.max_buffer:
-            self.buffer.append(experience)
-        else:
-            self.buffer[self.pos] = experience
-        
-        self.pos = (self.pos + 1) % self.max_buffer
-    
-    def _update_q_table(self, Q, state, action, reward, next_state, td_error, sampled_idx, adjusted_lr, obstacles):
-        if not self.buffer:
+    def _update_q_table(self, 
+                        Q, 
+                        state, 
+                        action, 
+                        reward, 
+                        next_state, 
+                        goal_state,
+                        td_error, 
+                        sampled_idx, 
+                        adjusted_lr, 
+                        obstacles):
+        if not self.experience.buffer:
             return Q
 
         if state not in Q:
@@ -60,7 +59,7 @@ class Agent:
         
         current_q = Q[state][action]
         
-        if next_state == self.goal or next_state in obstacles:
+        if next_state == goal_state or next_state in obstacles:
             td_target = reward
         else:
             if next_state not in Q:
@@ -72,6 +71,6 @@ class Agent:
         
         Q[state][action] = (1 - adjusted_lr) * current_q + (adjusted_lr * td_target)
         
-        self.buffer[sampled_idx][4] = float(new_td_error)
+        self.experience.buffer[sampled_idx][4] = float(new_td_error)
         
         return Q
