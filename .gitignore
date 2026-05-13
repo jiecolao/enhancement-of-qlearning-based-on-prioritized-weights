@@ -6,3 +6,5 @@
 *.jpeg
 *.png
 tests/*
+
+.env
