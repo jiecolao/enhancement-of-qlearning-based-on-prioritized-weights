@@ -227,15 +227,6 @@ BASE_OBSTACLES = {
 test_configs = [
     {
         'name': '9x9', # 9 * 5
-        'grid_size': 729,
-        'start_point': (0, 0),
-        'target_point': (32, 31), # Total Time (Charged): 0.09558s
-        'cells': 81, # 5,
-        'reroute': 26,
-        'base_obstacles': BASE_OBSTACLES
-    },
-    {
-        'name': '9x9', # 9 * 5
         'grid_size': 45,
         'start_point': (0, 0),
         'target_point': (32, 31), # Total Time (Charged): 0.09558s
@@ -273,6 +264,6 @@ test_configs = [
 ]
 
 # Run tests
-run_astar_test(test_configs[0], is_dynamic=False, withVisual=True, runs=1)
+run_astar_test(test_configs[0], is_dynamic=False, withVisual=True, runs=5)
 # for config in test_configs:
 #     run_astar_test(config, is_dynamic=False, withVisual=True)
