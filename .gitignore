@@ -6,6 +6,8 @@
 *.jpeg
 *.png
 tests/*
+
 src/EQLBPW/training_logs
+src/QLBPW/training_logs
 
 .env
