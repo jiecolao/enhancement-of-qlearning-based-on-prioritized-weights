@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import random
-from utility import AgentTracker
+from tracker import AgentTracker
 
 class QNetwork(nn.Module):
     # OBJ 3: Double Deep Q-Learning
