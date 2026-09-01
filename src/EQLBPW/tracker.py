@@ -1,3 +1,5 @@
+import tracemalloc
+
 class EnvironmentTracker:
 
     def __init__(self, grid, rows, cols, start, end, obstacles):
@@ -10,6 +12,9 @@ class EnvironmentTracker:
 
         self.pos = 0
         self.steps = 0
+        self.rewards = 0
+        self.pos_rewards = 0
+        self.neg_rewards = 0
         self.obstacle_encountered = 0
         self.goal_count = 0
         self.steps_per_ep = 0
@@ -36,10 +41,40 @@ class EnvironmentTracker:
                 print(row_str)
             print("="*40)
 
-    def print_episode_summary(self):
-        pass
+    def print_episode_summary(
+            self, 
+            curr_ep, 
+            max_ep, 
+            ep_tracker,
+            elapsed,
+            max_steps,
+            epsilon
+        ):
+        current, peak = tracemalloc.get_traced_memory()
+        print(
+            f"===== EPISODE {curr_ep}/{max_ep} SUMMARY =====\n"
+            f"{'Epsilon:':<30}| {epsilon:.3f}\n"
+            f"{f'Steps per {ep_tracker} episode:':<30}| {self.steps_per_ep} / {max_steps*max_ep}\n"
+            f"{f'Rewards per {ep_tracker} episode:':<30}| {self.rewards_per_ep}\n"
+            f"{'Episode Completion Time:':<30}| {elapsed:.2f} seconds\n"
+            f"{'Memory usage:':<30}| Current: {current / (1024 * 1024):.2f} MB, Peak: {peak / (1024 * 1024):.2f} MB\n"
+            f"{'Total Steps:':<30}| {self.steps}\n"
+            f"{'Total Obstacles Encountered:':<30}| {self.obstacle_encountered}\n"
+            f"{'Total Goals:':<30}| {self.goal_count}\n"
+            f"{'Total Rewards:':<30}| {self.rewards}\n"
+            f"{' ├── Positive Rewards:':<30}| {self.pos_rewards}\n"
+            f"{' └── Negative Rewards:':<30}| {self.neg_rewards}\n"
+            f""
+        )
+        self.steps_per_ep = 0
+        self.rewards_per_ep = 0
 
 class AgentTracker:
 
     def __init__(self):
         pass
+
+if __name__ == "__main__":
+    tracemalloc.start()
+    a = EnvironmentTracker(0, 0, 0, 0, 0, 0, 0)
+    a.print_episode_summary(1, 2, 1)
