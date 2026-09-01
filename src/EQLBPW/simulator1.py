@@ -30,7 +30,7 @@ def simulate():
     )
 
     target_sync_freq = 10
-    ep_tracker = 1
+    ep_tracker = 5
 
     env._generate_obstacles()
     
@@ -54,22 +54,36 @@ def simulate():
             env.agent_pos = next_state
             episode_reward += reward
 
+
+            # Trackers
             env.tracker.steps_per_ep += 1
-
-            if is_terminal:
-                env.tracker.rewards_per_ep += reward
-
+            env.tracker.steps += 1
             if reward < 0:
+                env.tracker.rewards -= 1
                 env.tracker.obstacle_encountered += 1
+                env.tracker.neg_rewards += 1
+            elif reward > 0:
+                env.tracker.rewards += 1
+                env.tracker.rewards_per_ep += reward
+                env.tracker.pos_rewards += 1
+                env.tracker.goal_count += 1
 
         if ep % target_sync_freq == 0:
             agent._sync_target()
 
         if ep % ep_tracker == 0:
             elapsed = time.time() - episode_start_time
-            print(f"Episode {ep:3d} | Total Steps: {env.tracker.steps_per_ep:3d} | Reward: {episode_reward:6.2f} | Epsilon: {agent.e:.3f} | Elapsed: {elapsed:.2f}")
-            print_memory_stats("Memory Status")
-            env.tracker.steps_per_ep = 0
+            env.tracker.print_episode_summary(
+                curr_ep=ep+1,
+                max_ep=env.episodes,
+                ep_tracker=ep_tracker,
+                elapsed=elapsed,
+                max_steps=env.max_steps,
+                epsilon=agent.e
+            )
+            # print(f"Episode {ep:3d} | Total Steps: {env.tracker.steps_per_ep:3d} | Reward: {episode_reward:6.2f} | Epsilon: {agent.e:.3f} | Elapsed: {elapsed:.2f}")
+            # print_memory_stats("Memory Status")
+            # env.tracker.steps_per_ep = 0
 
         agent._decay_e() 
 
