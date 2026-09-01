@@ -23,7 +23,7 @@ def simulate():
         start_state = (4, 0),
         end_state = (15, 13),
         agent = agent,
-        episodes = 50,
+        episodes = 5,
         no_of_obstacles = 10,
         static_obstacles = OBSTACLES[1]["obstacles"],
         is_dynamic_obs = True,
@@ -54,7 +54,6 @@ def simulate():
             env.agent_pos = next_state
             episode_reward += reward
 
-
             # Trackers
             env.tracker.steps_per_ep += 1
             env.tracker.steps += 1
@@ -74,29 +73,27 @@ def simulate():
         if ep % ep_tracker == 0:
             elapsed = time.time() - episode_start_time
             env.tracker.print_episode_summary(
-                curr_ep=ep+1,
+                curr_ep=ep,
                 max_ep=env.episodes,
                 ep_tracker=ep_tracker,
                 elapsed=elapsed,
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
-            # print(f"Episode {ep:3d} | Total Steps: {env.tracker.steps_per_ep:3d} | Reward: {episode_reward:6.2f} | Epsilon: {agent.e:.3f} | Elapsed: {elapsed:.2f}")
-            # print_memory_stats("Memory Status")
-            # env.tracker.steps_per_ep = 0
 
         agent._decay_e() 
 
-    return env.tracker.rewards_per_ep
+        if ep == env.episodes-1:     
+            elapsed_time = time.time() - start_time
+            print(f"EQLBPW Total Runtime: {elapsed_time:.2f} seconds")
+            print(f"EQLBPW Total Rewards: {env.tracker.rewards}")
+
 
 if __name__ == "__main__":
     print("\n=== EQLBPW-1 Simulation ===\n\n")
     tracemalloc.start()
     start_time = time.time()
-    total_rewards = simulate()
-    elapsed_time = time.time() - start_time
 
-    # print_memory_stats("DQN final memory")
-    print(f"\nEQLBPW Total Runtime: {elapsed_time:.2f} seconds")
-    print(f"EQLBPW Total Rewards: {total_rewards}")
+    simulate()
+    
     tracemalloc.stop()
