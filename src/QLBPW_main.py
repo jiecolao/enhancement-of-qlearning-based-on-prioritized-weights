@@ -1,9 +1,16 @@
 import numpy as np
 import random
 import time
+import tracemalloc
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
+
+
+def print_memory_stats(label):
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"{label} | Current: {current / (1024 * 1024):.2f} MB | Peak: {peak / (1024 * 1024):.2f} MB")
+
 
 def generate_base_obstacles(grid_size, num_obstacles, start_state, goal_state, seed=None, blocked=None):
     rng = random.Random(seed)
@@ -652,10 +659,14 @@ if __name__ == "__main__":
     )
 
     print(f"\nStarting simulation...")
+    tracemalloc.start()
     start_time = time.time() 
     a.simulate_qlbpw(start_time)
     end_time = time.time() 
     elapsed_time = end_time - start_time
+    print_memory_stats("QLBPW final memory")
+    print(f"QLBPW total runtime: {elapsed_time:.2f} seconds")
+    tracemalloc.stop()
 
     # simulations = [a, b, c, d]
     # index = 0

@@ -1,6 +1,12 @@
 from environment import Environment
 from agent import Agent
 import time
+import tracemalloc
+
+def print_memory_stats(label):
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"{label} | Current: {current / (1024 * 1024):.2f} MB | Peak: {peak / (1024 * 1024):.2f} MB")
+
 
 def simulate():
     BASE_OBSTACLES = {
@@ -29,11 +35,11 @@ def simulate():
     )
 
     env = Environment(
-        grid = 12,
+        grid = 15,
         start_state = (0, 0),
-        end_state = (11, 11),
+        end_state = (14, 14),
         agent = agent,
-        episodes = 1000,
+        episodes = 50,
         no_of_obstacles = 5,
         static_obstacles = BASE_OBSTACLES,
         is_dynamic_obs = False,
@@ -47,7 +53,7 @@ def simulate():
         episode_reward = 0.0
         is_terminal = False
 
-        while not is_terminal:
+        while not is_terminal and env.tracker.steps_per_ep <= env.max_steps:
             action = agent._e_greedy(curr_state)
             next_state, reward, is_terminal = env._take_step(curr_state, action)
 
@@ -70,5 +76,10 @@ def simulate():
         agent._decay_e()
 
 if __name__ == "__main__":
-
+    tracemalloc.start()
+    start_time = time.time()
     simulate()
+    elapsed_time = time.time() - start_time
+    print_memory_stats("\nDQN final memory")
+    print(f"DQN total runtime: {elapsed_time:.2f} seconds")
+    tracemalloc.stop()
