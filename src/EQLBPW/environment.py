@@ -32,7 +32,7 @@ class Environment:
 
         self.agent_pos = start_state
         self.steps = 0
-        self.max_steps = self.grid_cols * self.grid_cols ** 2 # 50
+        self.max_steps = self.grid_cols * self.grid_cols ** 2
         self.tracker = EnvironmentTracker(
             grid=grid,
             rows=grid,
@@ -68,8 +68,6 @@ class Environment:
                 dynamic_added += 1
 
     def _take_step(self, state, action):
-        self.steps += 1 # increment when obstacle is encountered?
-
         x, y = state
 
         # Actions: 0="up", 1="right", 2="down", 3="left"
@@ -88,12 +86,10 @@ class Environment:
         
         if next_state in self.obstacles:
             reward = -1
-            self.tracker.obstacle_encountered += 1
             next_state = state
         elif next_state == self.end_state:
             reward = 1
             is_terminal = True
-            self.tracker.goal_count += 1
         else:
             reward = 0
         return next_state, reward, is_terminal

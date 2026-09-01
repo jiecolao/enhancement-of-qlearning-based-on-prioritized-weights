@@ -4,7 +4,6 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import random
-from tracker import AgentTracker
 
 class QNetwork(nn.Module):
     # OBJ 3: Double Deep Q-Learning
@@ -26,9 +25,6 @@ class QNetwork(nn.Module):
 
 
 class ReplayBuffer:
-    # def __init__(self, capacity=10000):
-    #     self.buffer = deque(maxlen=capacity)
-
     def __init__(self, max_buffer, batch_size):
         self.buffer = deque(maxlen=max_buffer)
         self.batch_size = batch_size
@@ -86,8 +82,6 @@ class Agent:
         self.memory = ReplayBuffer(max_buffer=max_buffer, batch_size=batch_size)
         self.batch_size = batch_size    # The Number of Experiences To Be Sampled
         self.max_buffer = max_buffer    # Max Number of Stored Experiences
-
-        self.tracker = AgentTracker()
 
     def _adjust_alpha(self):
         pass
