@@ -1,16 +1,8 @@
+import tracemalloc
 
-class EnvironmentTracker:
+def print_memory_stats(label):
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"{label} | Current: {current / (1024 * 1024):.2f} MB | Peak: {peak / (1024 * 1024):.2f} MB\n")
 
-    def __init__(self):
-        self.pos = 0
-        self.steps = 0
-        self.obstacle_encountered = 0
-        self.goal_count = 0
-        self.steps_per_ep = 0
-        self.rewards_per_ep = 0
-        
 
-class AgentTracker:
 
-    def __init__(self):
-        pass
