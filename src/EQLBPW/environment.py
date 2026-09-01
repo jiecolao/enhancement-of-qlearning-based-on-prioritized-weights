@@ -47,7 +47,7 @@ class Environment:
         self.steps = 0
         return
 
-    def _generate_obstacles(self):
+    def generate_obstacles(self):
         self.obstacles.clear()
         self.obstacles = list(self.static_obstacles)
 
@@ -67,7 +67,7 @@ class Environment:
                 self.obstacles.append(rand_state)
                 dynamic_added += 1
 
-    def _take_step(self, state, action):
+    def take_step(self, state, action):
         x, y = state
 
         # Actions: 0="up", 1="right", 2="down", 3="left"

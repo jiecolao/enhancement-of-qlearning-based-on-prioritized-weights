@@ -83,24 +83,24 @@ class Agent:
         self.batch_size = batch_size    # The Number of Experiences To Be Sampled
         self.max_buffer = max_buffer    # Max Number of Stored Experiences
 
-    def _adjust_alpha(self):
+    def adjust_alpha(self):
         pass
 
-    def _e_greedy(self, state):
+    def e_greedy(self, state):
         if random.random() < self.e:
             return random.randrange(self.no_of_actions)
         state_t = torch.FloatTensor(state).unsqueeze(0)
         with torch.no_grad():
             return self.main_net(state_t).argmax().item()
 
-    def _decay_e(self):
+    def decay_e(self):
         # OBJ 2: Decaying epsilon
         self.e = max(self.e_min, self.e * self.e_decay)
 
-    def _sync_target(self):
+    def sync_target(self):
         self.target_net.load_state_dict(self.main_net.state_dict())
     
-    def _update(self):
+    def update(self):
         if len(self.memory) < self.batch_size:
             return
 
