@@ -1,4 +1,7 @@
+from datetime import datetime
 import tracemalloc
+import os
+import glob
 
 class EnvironmentTracker:
 
@@ -22,6 +25,24 @@ class EnvironmentTracker:
 
         self.shortest_recorded_steps = 0
         self.path_per_ep = []
+        
+        self.log_folder = "src/QLBPW/training_logs"
+        os.makedirs(self.log_folder, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.log_filename = f"log_{timestamp}.txt"
+        self.full_log_path = os.path.join(self.log_folder, self.log_filename)
+        self._manage_log_limit(max_logs=10)
+
+    def _manage_log_limit(self, max_logs):
+        search_pattern = os.path.join(self.log_folder, "log_*.txt")
+        existing_logs = glob.glob(search_pattern)
+        
+        existing_logs.sort(key=os.path.getmtime)
+        
+        while len(existing_logs) >= max_logs:
+            oldest_log = existing_logs.pop(0) 
+            os.remove(oldest_log)             
 
     def print_live_grid(self, agent_pos):
             print("\n" + "="*40)
@@ -54,7 +75,8 @@ class EnvironmentTracker:
             epsilon
         ):
         current, peak = tracemalloc.get_traced_memory()
-        print(
+
+        summary_text = (
             f"===== EPISODE {curr_ep}/{max_ep} SUMMARY =====\n"
             f"{'Epsilon:':<30}| {epsilon:.3f}\n"
             f"{f'Steps per {ep_tracker} episode:':<30}| {self.steps_per_ep} / {max_steps*max_ep}\n"
@@ -67,8 +89,13 @@ class EnvironmentTracker:
             f"{'Total Rewards:':<30}| {self.rewards}\n"
             f"{' ├── Positive Rewards:':<30}| {self.pos_rewards}\n"
             f"{' └── Negative Rewards:':<30}| {self.neg_rewards}\n"
-            f""
         )
+
+        print(summary_text)
+
+        with open(self.full_log_path, "a", encoding="utf-8") as log_file:
+            log_file.write(summary_text + "\n")
+
         self.steps_per_ep = 0
         self.rewards_per_ep = 0
 

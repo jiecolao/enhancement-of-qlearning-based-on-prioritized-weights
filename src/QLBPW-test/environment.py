@@ -1,4 +1,4 @@
-from QLBPW.agent import Agent
+from agent import Agent
 from tracker import EnvironmentTracker
 import random
 
@@ -60,3 +60,31 @@ class Environment:
                 
                 self.obstacles.append(rand_state)
                 dynamic_added += 1
+
+    def take_step(self, state, action):
+        x, y = state
+
+        # Actions: 0="up", 1="right", 2="down", 3="left"
+        if action == 0:
+            y = max(0, y - 1)
+        elif action == 1:
+            x = min(self.grid_cols - 1, x + 1)
+        elif action == 2:
+            y = min(self.grid_rows - 1, y + 1)
+        elif action == 3:
+            x = max(0, x - 1)
+
+        next_state = (x, y)
+
+        is_terminal = False
+
+        if next_state in self.obstacles:
+            reward = -1
+            next_state = state
+        elif next_state == self.end_state:
+            reward = 1
+            is_terminal = True
+        else:
+            reward = 0
+
+        return next_state, reward, is_terminal

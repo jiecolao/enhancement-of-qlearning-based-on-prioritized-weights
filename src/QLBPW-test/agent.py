@@ -9,7 +9,7 @@ class ReplayBuffer:
         self.batch_size = batch_size
 
     def push(self, state, action, reward, next_state, td_error):
-        self.buffer.append((state, action, reward, next_state, td_error))
+        self.buffer.append([state, action, reward, next_state, td_error])
 
     def sample(self):
         batch = random.sample(self.buffer, self.batch_size)
@@ -64,7 +64,8 @@ class Agent:
             td_error, 
             sampled_idx, 
             adjusted_lr,
-            end_state
+            end_state,
+            obstacles
     ):
         if not self.memory.buffer:
             return self.Q
@@ -74,27 +75,21 @@ class Agent:
         
         current_q = self.Q[state][action]
         
-        if next_state == end_state or next_state in self.obstacles:
+        if next_state == end_state or next_state in obstacles:
             td_target = reward
         else:
-            # Initialize next_state in Q-table if not present
-            if next_state not in Q:
-                Q[next_state] = np.zeros(self.no_of_actions)
-            max_q_next = np.max(Q[next_state])
+            if next_state not in self.Q:
+                self.Q[next_state] = np.zeros(self.no_of_actions)
+            max_q_next = np.max(self.Q[next_state])
             td_target = reward + self.gamma * max_q_next
         
-        # Calculate the new TD error (delta_j)
         new_td_error = td_target - current_q 
         
-        # 4. Update the Q-Table (Equation 9)
-        # We replace the standard alpha with our adjusted_lr (a_j)
-        Q[state][action] = (1 - adjusted_lr) * current_q + (adjusted_lr * td_target)
+        self.Q[state][action] = (1 - adjusted_lr) * current_q + (adjusted_lr * td_target)
         
-        # 5. Update the error in the buffer and re-sort
-        self.buffer[sampled_idx][4] = float(new_td_error)
-        # self.buffer.sort(key=lambda x: abs(x[4]), reverse=True)
+        self.memory.buffer[sampled_idx][4] = float(new_td_error)
         
-        return Q
+        return self.Q
 
     def epsilon_greedy(self, state):
         action = random.random()
