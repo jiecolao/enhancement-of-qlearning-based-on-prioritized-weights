@@ -1,93 +1,122 @@
+from environment import Environment
+from agent import Agent
+from env_settings import OBSTACLES
+from utility import *
 import time
-from QLBPW.agent import Agent
-from QLBPW.environment import Environment
+import tracemalloc
 
-BASE_OBSTACLES = {
-            (1, 0),                 (4, 0),                             (8, 0),
-                                                    (6, 1),
-    (0, 2),                 (3, 2),
-                    (2, 3),                 (5, 3),         (7, 3),     (8, 3), 
-    (0, 4),                 (3, 4),
-                                            (5, 5), (6, 5), (7, 5), 
-            (1, 6),                         (5, 6),         (7, 6), 
-                            (3, 7),         (5, 7),         (7, 7),
-    (0, 8)
-}
+def simulate():
+    agent = Agent(
+        alpha=0.1, 
+        gamma=0.9, 
+        beta=0.3,
+        e=0.9, 
+        e_min=0.1, 
+        e_decay=0.998,        
+        no_of_states=4, 
+        no_of_actions=4,
+        max_buffer=20,
+        batch_size=2000, 
+    )
 
-environment = [
-    {
-        'name': '9x9',
-        'grid': 9,
-        'start': (0, 0),
-        'goal': (6, 6),
-        'base_obstacles': BASE_OBSTACLES, 
-    },
-    {
-        'name': '10x10',
-        'grid': 10,
-        'start': (0, 0),
-        'goal': (9, 9),
-        'base_obstacles': Environment._generate_base_obstacles(
-            grid_size=10,
-            num_obstacles=20,
-            start_state=(0, 0),
-            goal_state=(9, 9),
-            seed=None
-        )
-    },
-    {
-        'name': '15x15',
-        'grid': 15,
-        'start': (0, 0),
-        'goal': (14, 14),
-        'base_obstacles': Environment._generate_base_obstacles(
-            grid_size=15,
-            num_obstacles=30,
-            start_state=(0, 0),
-            goal_state=(14, 14),
-            seed=None
-        )
-    },
-    {
-        'name': '20x20',
-        'grid': 20,
-        'start': (0, 0),
-        'goal': (19, 19),
-        'base_obstacles': Environment._generate_base_obstacles(
-            grid_size=10,
-            num_obstacles=40,
-            start_state=(0, 0),
-            goal_state=(19, 19),
-            seed=None
-        )
-    },
-]
+    env = Environment(
+        grid=9,
+        start_state=(0, 0),
+        end_state=(8, 8),
+        agent=agent,
+        episodes=10,
+        no_of_obstacles=0,
+        static_obstacles= OBSTACLES[0]["obstacles"],
+        is_dynamic_obs=True
+    )
 
-agent = Agent(
-    episodes=1000,
-    alpha=0.1,
-    gamma=0.9,
-    beta=0.3,
-    epsilon=0.9,
-    max_buffer=5000
-)
+    ep_tracker = 1
+    env.generate_obstacles()
+    env.tracker.print_live_grid(env.agent_pos)
 
-test = Environment(
-    agent=agent,
-    grid=9,
-    start=(0, 0),
-    goal=(6, 6),
-    enable_obs=False,
-    # obstacles=[],
-    obstacles=BASE_OBSTACLES,
-    num_dynamic_obs=0
-)
+    for ep in range(env.episodes):
+        env.agent_pos = env.start_state
+        is_terminal = False
+
+        if ep % ep_tracker == 0:
+            episode_start_time = time.time()
+
+        while not is_terminal and env.tracker.steps_per_ep <= env.max_steps:
+            action = agent.epsilon_greedy(env.agent_pos)
+            next_state, reward, is_terminal = env.take_step(env.agent_pos, action)
+
+            agent.memory.push(env.agent_pos, action, reward, next_state, is_terminal)
+
+            if env.agent_pos not in agent.Q:
+                agent.Q[env.agent_pos] = np.zeros(agent.no_of_actions)
+
+            current_q = agent.Q[env.agent_pos][action]
+
+            if is_terminal:
+                td_target = reward
+            else:
+                if next_state not in agent.Q:
+                    agent.Q[next_state] = np.zeros(agent.no_of_actions)
+                max_q_next = np.max(agent.Q[next_state])
+                td_target = reward + agent.gamma * max_q_next
+
+            td_error = td_target - current_q
+            
+            agent.memory.push(env.agent_pos, action, reward, next_state, td_error)
+
+            if len(agent.memory) > 0:
+                (sampled_state, sampled_action, sampled_reward, 
+                    sampled_next_state, sampled_td_error, 
+                    sampled_idx, adjusted_lr) = agent.adjust_lr()
+                agent.Q = agent.update_Q(
+                    state=sampled_state, 
+                    action=sampled_action, 
+                    reward=sampled_reward, 
+                    next_state=sampled_next_state, 
+                    td_error=sampled_td_error, 
+                    sampled_idx=sampled_idx, 
+                    adjusted_lr=adjusted_lr,
+                    end_state=env.end_state,
+                    obstacles=env.obstacles
+                )
+
+            env.agent_pos = next_state
+
+            # Trackers
+            env.tracker.steps_per_ep += 1
+            env.tracker.steps += 1
+            if reward < 0:
+                env.tracker.rewards -= reward
+                env.tracker.obstacle_encountered += 1
+                env.tracker.neg_rewards += reward
+            elif reward > 0:
+                env.tracker.rewards += reward
+                env.tracker.rewards_per_ep += reward
+                env.tracker.pos_rewards += reward
+                env.tracker.goal_count += 1
+
+        if ep % ep_tracker == 0:
+            elapsed = time.time() - episode_start_time
+            env.tracker.print_episode_summary(
+                curr_ep=ep, 
+                max_ep=env.episodes, 
+                ep_tracker=ep_tracker,
+                elapsed=elapsed,
+                max_steps=env.max_steps,
+                epsilon=agent.e
+            )
+
+    return agent, env
 
 
-print(f"\nStarting simulation...")
-start_time = time.time() 
-print("Simulating")
-test.simulate()
-end_time = time.time() 
-elapsed_time = end_time - start_time
-print(f"Simulation Done: {elapsed_time}")
+if __name__ == "__main__":
+    print("\n=== QLBPW Simulation ===\n\n")
+    tracemalloc.start()
+    start_time = time.time()
+
+    trained_agent, trained_env = simulate()
+
+    tracemalloc.stop()
+
+    # Visualizers
+    # visualize_learned_path_dqn(self=trained_env, agent=trained_agent)

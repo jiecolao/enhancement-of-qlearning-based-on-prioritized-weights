@@ -1,148 +1,90 @@
-import time
+from agent import Agent
+from tracker import EnvironmentTracker
 import random
-import numpy as np
-from QLBPW.agent import Agent
 
 class Environment:
-
-    def __init__(self,
+    def __init__(
+            self,
+            grid,
+            start_state,
+            end_state,
             agent: Agent,
+            episodes,
+            no_of_obstacles,
+            static_obstacles,
+            is_dynamic_obs = False,
+    ):
+        self.grid_size = grid
+        self.grid_rows = grid
+        self.grid_cols = grid
+        self.start_state = start_state
+        self.end_state = end_state
 
-            grid: int = 9,
-            start: tuple = (0, 0),
-            goal: tuple = (0, 1),
-
-            enable_obs: bool = False,
-            obstacles: list = [], 
-            num_dynamic_obs: int = 5
-            ):
         self.agent = agent
-        self.actions = agent.actions
-        self.episodes = agent.episodes
-        
-        self.rows = grid
-        self.columns = grid
-        self.start = start
-        self.goal = goal
+        self.episodes = episodes
 
-        self.enable_obs = enable_obs
-        self.obstacles = obstacles
-        self.num_dynamic_obs = num_dynamic_obs
-        
-    def simulate(self):
-        Q = {}
+        self.no_of_obstacles = no_of_obstacles
+        self.static_obstacles = static_obstacles
+        self.is_dynamic_obs = is_dynamic_obs
 
-        for e in range(self.episodes):
-            self._generate_obstacles()
+        self.obstacles = list()
 
-            curr_state = self.start
+        self.agent_pos = start_state
+        self.steps = 0
+        self.max_steps = self.grid_cols * self.grid_cols ** 2
+        self.tracker = EnvironmentTracker(
+            grid=grid,
+            rows=grid,
+            cols=grid,
+            start=start_state,
+            end=end_state,
+            obstacles=static_obstacles
+        )
 
-            self.agent.gamma = 0.1 + (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # gamma scales
-            self.agent.epsilon = 0.9 - (0.9 - 0.1) * (e / max(1, self.episodes - 1)) # epsilon scales DOWN
-            
-            is_terminal = False
-            
-            while not is_terminal:
-                action = self.agent._epsilon_greedy(Q, curr_state)
+    def generate_obstacles(self):
+        self.obstacles.clear()
+        self.obstacles = list(self.static_obstacles)
 
-                next_state, reward, is_terminal = self._move(curr_state, action)
-
-                if curr_state not in Q:
-                    Q[curr_state] = np.zeros(self.agent.no_of_actions)
-
-                current_q = Q[curr_state][action]
-
-                if is_terminal:
-                    td_target = reward
-                else:
-                    if next_state not in Q:
-                        Q[next_state] = np.zeros(self.agent.no_of_actions)
-
-                    max_q_next = np.max(Q[next_state])
-                    td_target = reward + self.agent.gamma * max_q_next
-
-                td_error = td_target - current_q
-
-                self.agent.experience._add_experience(curr_state, action, reward, next_state, td_error)
-
-                if len(self.agent.experience.buffer) > 0:
-                    (sampled_state, sampled_action, sampled_reward, 
-                     sampled_next_state, sampled_td_error, 
-                     sampled_idx, adjusted_lr) = self.agent.experience._sample()
-                    # Prioritized weight update Q
-                    Q = self.agent._update_q_table(Q, sampled_state, sampled_action, sampled_reward, 
-                                       sampled_next_state, self.goal, sampled_td_error, 
-                                       sampled_idx, adjusted_lr, self.obstacles)
-                    
-                curr_state = next_state
-                
-                # print(f"Episode: {e}")
-                # print(f"Agent: {curr_state}")
-
-    def _generate_obstacles(self):
-        if not self.enable_obs:
+        if not self.is_dynamic_obs:
             return
-        
-        # self.obstacles.clear()
 
-        obs = 0
-        while obs < self.num_dynamic_obs:
-
-            x = random.randint(0, self.columns - 1)
-            y = random.randint(0, self.rows - 1)
-            rand_state = (x, y)
+        dynamic_added = 0
+        while dynamic_added < self.no_of_obstacles:
+            rand_x = random.randint(0, self.grid_cols - 1)
+            rand_y = random.randint(0, self.grid_rows - 1)
+            rand_state = (rand_x, rand_y)
             
             if (rand_state != self.start_state and 
-                rand_state != self.goal_state and 
+                rand_state != self.end_state and 
                 rand_state not in self.obstacles):
                 
                 self.obstacles.append(rand_state)
-                obs += 1
+                dynamic_added += 1
 
-    def _move(self, state, action: int):
+    def take_step(self, state, action):
         x, y = state
 
+        # Actions: 0="up", 1="right", 2="down", 3="left"
         if action == 0:
             y = max(0, y - 1)
         elif action == 1:
-            x = min(self.columns - 1, x + 1)
+            x = min(self.grid_cols - 1, x + 1)
         elif action == 2:
-            y = min(self.rows - 1, y + 1)
+            y = min(self.grid_rows - 1, y + 1)
         elif action == 3:
             x = max(0, x - 1)
 
         next_state = (x, y)
 
         is_terminal = False
-        
+
         if next_state in self.obstacles:
             reward = -1
             next_state = state
-        elif next_state == self.goal:
+        elif next_state == self.end_state:
             reward = 1
             is_terminal = True
         else:
             reward = 0
 
         return next_state, reward, is_terminal
-
-    def _generate_base_obstacles(grid_size, 
-                                 num_obstacles, 
-                                 start_state, 
-                                 goal_state, 
-                                 seed=None, 
-                                 blocked=None):
-        rng = random.Random(seed)
-        blocked_states = set(blocked or [])
-        blocked_states.update([start_state, goal_state])
-
-        all_states = [(x, y) for x in range(grid_size) for y in range(grid_size)]
-        candidates = [state for state in all_states if state not in blocked_states]
-
-        if num_obstacles > len(candidates):
-            raise ValueError("num_obstacles exceeds available free cells")
-
-        return set(rng.sample(candidates, num_obstacles))
-
-if __name__ == "__main__":
-    Environment().simulate()
