@@ -113,7 +113,8 @@ class Agent:
 
         # r + \gamma * max_a' Q(s', a'; \theta^-)
         with torch.no_grad():
-            q_next_max = self.target_net(next_states).max(1, keepdim=True)[0]
+            best_next_actions = self.main_net(next_states).argmax(1, keepdim=True)
+            q_next_max = self.target_net(next_states).gather(1, best_next_actions)
             q_target = rewards + (1 - dones) * self.gamma * q_next_max
 
         loss = self.criterion(q_current, q_target)

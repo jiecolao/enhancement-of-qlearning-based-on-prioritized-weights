@@ -7,17 +7,17 @@ from visualizer import Visualizer
 
 def simulate():
     agent = Agent(
-        alpha=0.1,              # Learning Rate
-        gamma=0.9,              # Discount Factor
+        alpha=0.001,              # Learning Rate
+        gamma=0.95,              # Discount Factor
         beta=0.3,               # Beta
-        e=0.9,                  # Epsilon
+        e=1.0,                  # Epsilon
         e_min=0.1,              # Minimun Epsilon
-        e_decay=0.999,          # Epsilon Decay
+        e_decay=0.97,          # Epsilon Decay
         no_of_states=4,         # States
         no_of_actions=4,        # Actions: 1=up, 2=right, 3=down, 4=left 
-        batch_size=20,          # The Number of Experiences To Be Sampled
-        max_buffer=2000,        # Max Number of Stored Experiences
-        target_sync_freq=5      # Max Number of Stored Experiences
+        batch_size=64,          # The Number of Experiences To Be Sampled
+        max_buffer=1000,        # Max Number of Stored Experiences
+        target_sync_freq=5      # When should the Target Network sync
     )
 
     env = Environment(
@@ -25,7 +25,7 @@ def simulate():
         start_state = (4, 0),                           # Agent Starting Position
         end_state = (15, 13),                           # Finish Line
         agent = agent,                                  # Agent
-        episodes = 10,                                   # Episodes to train
+        episodes = 1,                                   # Episodes to train
         no_of_obstacles = 0,                            # Number of obstacles to appear. (To spawn, set is_dynamic_obs to True)
         static_obstacles = OBSTACLES[1]["obstacles"],   # Premade obstacles
         is_dynamic_obs = True,                          # Obstacle Event Trigger
