@@ -35,6 +35,31 @@ class EnvironmentTracker:
         self.log_filename = f"log_{timestamp}.txt"
         self.full_log_path = os.path.join(self.log_folder, self.log_filename)
         self._manage_log_limit(max_logs=10)
+        self._print_and_log(self._agent_details())
+
+    def _agent_details(self):
+        parameter_count = sum(
+            parameter.numel() for parameter in self.agent.main_net.parameters()
+        )
+        return (
+            "\n" + "="*40 + "\n"
+            "AGENT INITIALIZED\n"
+            + "="*40 + "\n"
+            f"{'Agent type:':<30}| {type(self.agent).__name__}\n"
+            f"{'Learning rate (alpha):':<30}| {self.agent.alpha}\n"
+            f"{'Discount factor (gamma):':<30}| {self.agent.gamma}\n"
+            f"{'Beta:':<30}| {self.agent.beta}\n"
+            f"{'Epsilon:':<30}| {self.agent.e}\n"
+            f"{'Minimum epsilon:':<30}| {self.agent.e_min}\n"
+            f"{'Epsilon decay:':<30}| {self.agent.e_decay}\n"
+            f"{'Actions:':<30}| {self.agent.no_of_actions}\n"
+            f"{'Replay buffer capacity:':<30}| {self.agent.max_buffer}\n"
+            f"{'Replay batch size:':<30}| {self.agent.batch_size}\n"
+            f"{'Target sync frequency:':<30}| {self.agent.target_sync_freq}\n"
+            f"{'Main network parameters:':<30}| {parameter_count}\n"
+            f"{'Main network:':<30}|\n{self.agent.main_net}\n"
+            + "="*40
+        )
 
     def _manage_log_limit(self, max_logs):
         search_pattern = os.path.join(self.log_folder, "log_*.txt")
