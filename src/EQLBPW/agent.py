@@ -60,7 +60,8 @@ class Agent:
             no_of_states, 
             no_of_actions,
             max_buffer,
-            batch_size, 
+            batch_size,
+            target_sync_freq 
     ):
         self.alpha = alpha              # Learning Rate   
         self.gamma = gamma              # Discount Factor
@@ -80,8 +81,9 @@ class Agent:
         self.criterion = nn.MSELoss()
 
         self.memory = ReplayBuffer(max_buffer=max_buffer, batch_size=batch_size)
-        self.batch_size = batch_size    # The Number of Experiences To Be Sampled
-        self.max_buffer = max_buffer    # Max Number of Stored Experiences
+        self.batch_size = batch_size        # The Number of Experiences To Be Sampled
+        self.max_buffer = max_buffer        # Max Number of Stored Experiences
+        self.target_sync_freq = target_sync_freq  # How often the target network should sync with main 
 
     def adjust_alpha(self):
         pass

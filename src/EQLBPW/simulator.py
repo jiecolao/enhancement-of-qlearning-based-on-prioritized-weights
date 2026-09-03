@@ -17,6 +17,7 @@ def simulate():
         no_of_actions=4,
         batch_size=20, 
         max_buffer=2000,
+        target_sync_freq=5
     )
 
     env = Environment(
@@ -25,12 +26,11 @@ def simulate():
         end_state = (15, 13),
         agent = agent,
         episodes = 10,
-        no_of_obstacles = 10,
+        no_of_obstacles = 0,
         static_obstacles = OBSTACLES[1]["obstacles"],
         is_dynamic_obs = True,
     )
 
-    target_sync_freq = 10
     ep_tracker = 5
 
     env.generate_obstacles()
@@ -67,7 +67,7 @@ def simulate():
                 env.tracker.pos_rewards += 1
                 env.tracker.goal_count += 1
 
-        if ep % target_sync_freq == 0:
+        if ep % agent.target_sync_freq == 0:
             agent.sync_target()
 
         if ep % ep_tracker == 0:
