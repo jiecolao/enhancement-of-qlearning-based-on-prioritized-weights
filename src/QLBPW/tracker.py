@@ -46,10 +46,13 @@ class EnvironmentTracker:
             oldest_log = existing_logs.pop(0) 
             os.remove(oldest_log)             
 
+    def _print_and_log(self, text):
+        print(text)
+        with open(self.full_log_path, "a", encoding="utf-8") as log_file:
+            log_file.write(text + "\n")
+
     def print_live_grid(self, agent_pos):
-            print("\n" + "="*40)
-            print("ENVIRONMENT")
-            print("="*40)
+            grid_lines = ["", "="*40, "ENVIRONMENT", "="*40]
             for y in range(self.env.grid_rows):
                 row_str = ""
                 for x in range(self.env.grid_cols):
@@ -64,14 +67,11 @@ class EnvironmentTracker:
                         row_str += " # "
                     else:
                         row_str += " . "
-                print(row_str)
-            print("="*40)
+                grid_lines.append(row_str)
+            grid_lines.append("="*40)
+            self._print_and_log("\n".join(grid_lines))
 
     def print_optimal_path(self):
-        print("\n" + "="*40)
-        print("OPTIMAL PATH")
-        print("="*40)
-        
         curr_state = self.env.start_state
         path = [curr_state]
         is_terminal = False
@@ -87,8 +87,9 @@ class EnvironmentTracker:
             curr_state = next_state
             steps += 1
 
+        path_lines = ["", "="*40, "OPTIMAL PATH", "="*40]
         if curr_state != self.env.end_state:
-            print("<!> Warning: Agent got stuck and didn't reach the goal.")
+            path_lines.append("<!> Warning: Agent got stuck and didn't reach the goal.")
 
         for y in range(self.env.grid_rows):
             row_str = ""
@@ -105,10 +106,10 @@ class EnvironmentTracker:
                     row_str += " + "
                 else:
                     row_str += " . "
-            print(row_str)
-            
-        print(f"\nSteps taken: {len(path) - 1}")
-        print("="*40)
+            path_lines.append(row_str)
+
+        path_lines.extend(("", f"Steps taken: {len(path) - 1}", "="*40))
+        self._print_and_log("\n".join(path_lines))
 
     def print_episode_summary(
             self, 
@@ -136,10 +137,7 @@ class EnvironmentTracker:
             f"{' └── Negative Rewards:':<30}| {self.neg_rewards}\n"
         )
 
-        print(summary_text)
-
-        with open(self.full_log_path, "a", encoding="utf-8") as log_file:
-            log_file.write(summary_text + "\n")
+        self._print_and_log(summary_text)
 
         self.steps_per_ep = 0
         self.rewards_per_ep = 0
