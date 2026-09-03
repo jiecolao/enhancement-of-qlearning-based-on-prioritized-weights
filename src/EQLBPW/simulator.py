@@ -3,6 +3,7 @@ from agent import Agent
 import time
 from env_settings import OBSTACLES
 from utility import *
+from visualizer import Visualizer
 
 def simulate():
     agent = Agent(
@@ -33,8 +34,7 @@ def simulate():
     ep_tracker = 5
 
     env.generate_obstacles()
-    
-    env.tracker.print_live_grid(env.agent_pos)
+    # env.tracker.print_live_grid(env.agent_pos)
 
     for ep in range(env.episodes):
         env.agent_pos = env.start_state
@@ -80,7 +80,7 @@ def simulate():
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
-
+            
         agent.decay_e() 
 
         if ep == env.episodes-1:     
@@ -88,12 +88,21 @@ def simulate():
             print(f"EQLBPW Total Runtime: {elapsed_time:.2f} seconds")
             print(f"EQLBPW Total Rewards: {env.tracker.rewards}")
 
+    return agent, env
 
 if __name__ == "__main__":
     print("\n=== EQLBPW-1 Simulation ===\n\n")
+
     tracemalloc.start()
     start_time = time.time()
 
-    simulate()
+    trained_agent, trained_env = simulate()
+
+    # Visualizer
+    visual = Visualizer(
+        agent=trained_agent,
+        env=trained_env
+    )
+    visual.dqn_visualize_learned_path()
     
     tracemalloc.stop()
