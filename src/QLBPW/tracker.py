@@ -35,6 +35,27 @@ class EnvironmentTracker:
         self.log_filename = f"log_{timestamp}.txt"
         self.full_log_path = os.path.join(self.log_folder, self.log_filename)
         self._manage_log_limit(max_logs=10)
+        self._print_and_log(self._agent_details())
+
+    def _agent_details(self):
+        return (
+            "\n" + "="*40 + "\n"
+            "AGENT INITIALIZED\n"
+            + "="*40 + "\n"
+            f"{'Agent type:':<30}| {type(self.agent).__name__}\n"
+            f"{'Initial learning rate (alpha):':<30}| {self.agent.init_alpha}\n"
+            f"{'Learning rate (alpha):':<30}| {self.agent.alpha}\n"
+            f"{'Discount factor (gamma):':<30}| {self.agent.gamma}\n"
+            f"{'Beta:':<30}| {self.agent.beta}\n"
+            f"{'Epsilon:':<30}| {self.agent.e}\n"
+            f"{'Minimum epsilon:':<30}| {self.agent.e_min}\n"
+            f"{'Epsilon decay:':<30}| {self.agent.e_decay}\n"
+            f"{'Actions:':<30}| {self.agent.no_of_actions}\n"
+            f"{'Replay buffer capacity:':<30}| {self.agent.max_buffer}\n"
+            f"{'Replay batch size:':<30}| {self.agent.batch_size}\n"
+            f"{'Q-table states at initialization:':<30}| {len(self.agent.Q)}\n"
+            + "="*40
+        )
 
     def _manage_log_limit(self, max_logs):
         search_pattern = os.path.join(self.log_folder, "log_*.txt")
