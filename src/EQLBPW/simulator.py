@@ -25,7 +25,7 @@ def simulate():
         start_state = (4, 0),                           # Agent Starting Position
         end_state = (15, 13),                           # Finish Line
         agent = agent,                                  # Agent
-        episodes = 1,                                   # Episodes to train
+        episodes = 10,                                   # Episodes to train
         no_of_obstacles = 0,                            # Number of obstacles to appear. (To spawn, set is_dynamic_obs to True)
         static_obstacles = OBSTACLES[1]["obstacles"],   # Premade obstacles
         is_dynamic_obs = True,                          # Obstacle Event Trigger
@@ -92,18 +92,20 @@ def simulate():
     return agent, env
 
 if __name__ == "__main__":
-    print("\n=== EQLBPW-1 Simulation ===\n\n")
-
+    print("\n" + "="*40)
+    print("EQLBPW Simulation")
+    print("="*40)
     tracemalloc.start()
     start_time = time.time()
 
     trained_agent, trained_env = simulate()
 
-    # Visualizer
+    # Visuals
+    trained_env.tracker.print_optimal_path()
     visual = Visualizer(
         agent=trained_agent,
         env=trained_env
     )
-    visual.eqlbpqw_visualize_learned_path(save_fig=True)
+    # visual.eqlbpqw_visualize_learned_path(save_fig=True)
     
     tracemalloc.stop()
