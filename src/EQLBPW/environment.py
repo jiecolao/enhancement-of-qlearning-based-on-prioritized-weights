@@ -34,12 +34,8 @@ class Environment:
         self.steps = 0
         self.max_steps = self.grid_cols * self.grid_cols ** 2
         self.tracker = EnvironmentTracker(
-            grid=grid,
-            rows=grid,
-            cols=grid,
-            start=start_state,
-            end=end_state,
-            obstacles=static_obstacles
+            agent=agent,
+            env=self
         )
 
     def _reset(self):
