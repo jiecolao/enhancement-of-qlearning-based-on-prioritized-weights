@@ -22,9 +22,9 @@ def simulate():
     env = Environment(
         grid=9,
         start_state=(0, 0),
-        end_state=(8, 8),
+        end_state=(8, 1),
         agent=agent,
-        episodes=10,
+        episodes=15,
         no_of_obstacles=0,
         static_obstacles= OBSTACLES[0]["obstacles"],
         is_dynamic_obs=True
@@ -110,13 +110,15 @@ def simulate():
 
 
 if __name__ == "__main__":
-    print("\n=== QLBPW Simulation ===\n\n")
+    print("\n" + "="*40)
+    print("QLBPW Simulation")
+    print("="*40)
     tracemalloc.start()
     start_time = time.time()
 
     trained_agent, trained_env = simulate()
 
-    tracemalloc.stop()
+    # Visuals
+    trained_env.tracker.print_optimal_path()
 
-    # Visualizers
-    # visualize_learned_path_dqn(self=trained_env, agent=trained_agent)
+    tracemalloc.stop()
