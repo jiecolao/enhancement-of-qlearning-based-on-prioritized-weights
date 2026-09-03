@@ -1,17 +1,19 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from datetime import datetime
+from agent import Agent
+import numpy as np
 import tracemalloc
 import os
 import glob
 
+if TYPE_CHECKING: from environment import Environment
+
 class EnvironmentTracker:
 
-    def __init__(self, grid, rows, cols, start, end, obstacles):
-        self.grid = grid
-        self.rows = rows
-        self.cols = cols
-        self.start_state = start
-        self.end_state = end
-        self.obstacles = obstacles
+    def __init__(self, agent: Agent, env: Environment):
+        self.agent = agent
+        self.env = env
 
         self.pos = 0
         self.steps = 0
@@ -48,22 +50,65 @@ class EnvironmentTracker:
             print("\n" + "="*40)
             print("ENVIRONMENT")
             print("="*40)
-            for y in range(self.rows):
+            for y in range(self.env.grid_rows):
                 row_str = ""
-                for x in range(self.cols):
+                for x in range(self.env.grid_cols):
                     state = (x, y)
                     if state == agent_pos:
-                        row_str += " 🤖 \t"
-                    elif state == self.start_state:
-                        row_str += " 🚪 \t"
-                    elif state == self.end_state:
-                        row_str += " 🏁 \t"
-                    elif state in self.obstacles:
-                        row_str += " 🧱 \t"
+                        row_str += " A "
+                    elif state == self.env.start_state:
+                        row_str += " S "
+                    elif state == self.env.end_state:
+                        row_str += " G "
+                    elif state in self.env.obstacles:
+                        row_str += " # "
                     else:
-                        row_str += " . \t"
+                        row_str += " . "
                 print(row_str)
             print("="*40)
+
+    def print_optimal_path(self):
+        print("\n" + "="*40)
+        print("OPTIMAL PATH")
+        print("="*40)
+        
+        curr_state = self.env.start_state
+        path = [curr_state]
+        is_terminal = False
+        steps = 0
+        max_steps = (self.env.grid_rows * self.env.grid_cols) * 2
+
+        while not is_terminal and steps < max_steps:
+            if curr_state not in self.agent.Q:
+                break
+            best_action = np.argmax(self.agent.Q[curr_state])
+            next_state, _, is_terminal = self.env.take_step(curr_state, best_action)
+            path.append(next_state)
+            curr_state = next_state
+            steps += 1
+
+        if curr_state != self.env.end_state:
+            print("<!> Warning: Agent got stuck and didn't reach the goal.")
+
+        for y in range(self.env.grid_rows):
+            row_str = ""
+            for x in range(self.env.grid_cols):
+                state = (x, y)
+                
+                if state == self.env.start_state:
+                    row_str += " A "
+                elif state == self.env.end_state:
+                    row_str += " G "
+                elif state in self.env.obstacles:
+                    row_str += " # "
+                elif state in path:
+                    row_str += " + "
+                else:
+                    row_str += " . "
+            print(row_str)
+            
+        print(f"\nSteps taken: {len(path) - 1}")
+        print("="*40)
 
     def print_episode_summary(
             self, 
@@ -99,10 +144,6 @@ class EnvironmentTracker:
         self.steps_per_ep = 0
         self.rewards_per_ep = 0
 
-class AgentTracker:
-
-    def __init__(self):
-        pass
 
 if __name__ == "__main__":
     tracemalloc.start()
