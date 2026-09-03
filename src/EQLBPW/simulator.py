@@ -7,40 +7,41 @@ from visualizer import Visualizer
 
 def simulate():
     agent = Agent(
-        alpha=0.1,
-        gamma=0.9,
-        beta=0.3,
-        e=0.9, 
-        e_min=0.1, 
-        e_decay=0.999,        
-        no_of_states=4, 
-        no_of_actions=4,
-        batch_size=20, 
-        max_buffer=2000,
-        target_sync_freq=5
+        alpha=0.1,              # Learning Rate
+        gamma=0.9,              # Discount Factor
+        beta=0.3,               # Beta
+        e=0.9,                  # Epsilon
+        e_min=0.1,              # Minimun Epsilon
+        e_decay=0.999,          # Epsilon Decay
+        no_of_states=4,         # States
+        no_of_actions=4,        # Actions: 1=up, 2=right, 3=down, 4=left 
+        batch_size=20,          # The Number of Experiences To Be Sampled
+        max_buffer=2000,        # Max Number of Stored Experiences
+        target_sync_freq=5      # Max Number of Stored Experiences
     )
 
     env = Environment(
-        grid = 20,
-        start_state = (4, 0),
-        end_state = (15, 13),
-        agent = agent,
-        episodes = 10,
-        no_of_obstacles = 0,
-        static_obstacles = OBSTACLES[1]["obstacles"],
-        is_dynamic_obs = True,
+        grid = 20,                                      # Grid Environment gridxgrid
+        start_state = (4, 0),                           # Agent Starting Position
+        end_state = (15, 13),                           # Finish Line
+        agent = agent,                                  # Agent
+        episodes = 1,                                   # Episodes to train
+        no_of_obstacles = 0,                            # Number of obstacles to appear. (To spawn, set is_dynamic_obs to True)
+        static_obstacles = OBSTACLES[1]["obstacles"],   # Premade obstacles
+        is_dynamic_obs = True,                          # Obstacle Event Trigger
     )
 
-    ep_tracker = 5
+    ep_tracker = 5                                      # How and when should the tracker print the summary 
 
-    env.generate_obstacles()
-    # env.tracker.print_live_grid(env.agent_pos)
+    env.generate_obstacles()                            # Initialize obstacles
+    env.tracker.print_live_grid(env.agent_pos)          # Display Grid in Terminal 
 
     for ep in range(env.episodes):
-        env.agent_pos = env.start_state
+        env.agent_pos = env.start_state 
         episode_reward = 0.0
         is_terminal = False
-        
+
+        # Tracker
         if ep % ep_tracker == 0:
             episode_start_time = time.time()
 
@@ -103,6 +104,6 @@ if __name__ == "__main__":
         agent=trained_agent,
         env=trained_env
     )
-    visual.dqn_visualize_learned_path()
+    visual.eqlbpqw_visualize_learned_path(save_fig=True)
     
     tracemalloc.stop()
