@@ -23,5 +23,9 @@ This study further enhances the study of Chunlei Wang, Xiao Yang, and He Li name
 2. Advanced exploration strategy 
 3. Double DQL
 
-
 Wang, C., et al. (2022). Improved Q-Learning Applied to Dynamic Obstacle Avoidance and Path Planning. https://ieeexplore.ieee.org/abstract/document/9870811
+
+## HOW TO RUN:
+- cd src
+- python -m EQLBPW.simulator
+- python -m QLBPW.simulator
