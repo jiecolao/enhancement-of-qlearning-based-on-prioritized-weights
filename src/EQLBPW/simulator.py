@@ -1,5 +1,5 @@
-from environment import Environment
-from agent import Agent
+from .environment import Environment
+from .agent import Agent
 from env_settings import OBSTACLES
 from visualizer import Visualizer
 import time
@@ -11,22 +11,21 @@ def simulate():
         gamma=0.95,              # Discount Factor
         beta=0.3,               # Beta
         e=1.0,                  # Epsilon
-        e_min=0.1,              # Minimun Epsilon
-        e_decay=0.999,          # Epsilon Decay
-        no_of_states=4,         # States
+        e_min=0.05,              # Minimun Epsilon
+        e_decay=0.97,          # Epsilon Decay
         no_of_actions=4,        # Actions: 1=up, 2=right, 3=down, 4=left 
         batch_size=64,          # The Number of Experiences To Be Sampled
         max_buffer=10000,        # Max Number of Stored Experiences
-        target_sync_freq=1      # When should the Target Network sync
+        target_sync_freq=5      # When should the Target Network sync
     )
 
     env = Environment(
         grid = 20,                                      # Grid Environment gridxgrid
         start_state = (4, 0),                           # Agent Starting Position
-        end_state = (15, 13),                           # Finish Line
+        end_state = (16, 7),                           # Finish Line
         agent = agent,                                  # Agent
-        episodes = 10,                                   # Episodes to train
-        ep_tracker = 2,                                 # How and when should the tracker print the summary
+        episodes = 100,                                   # Episodes to train
+        ep_tracker = 5,                                 # How and when should the tracker print the summary
         no_of_obstacles = 0,                            # Number of obstacles to appear. (To spawn, set is_dynamic_obs to True)
         static_obstacles = OBSTACLES[1]["obstacles"],   # Premade obstacles
         is_dynamic_obs = True,                          # Obstacle Event Trigger
@@ -45,7 +44,7 @@ def simulate():
         if episode_number % env.ep_tracker == 0:
             episode_start_time = time.time()
 
-        while not is_terminal and env.tracker.steps_per_ep <= env.max_steps:
+        while not is_terminal and env.tracker.steps_per_ep < env.max_steps:
             action = agent.e_greedy(env.agent_pos)
             next_state, reward, is_terminal = env.take_step(env.agent_pos, action)
 
@@ -59,13 +58,13 @@ def simulate():
             env.tracker.steps_per_ep += 1
             env.tracker.steps += 1
             if reward < 0:
-                env.tracker.rewards -= 1
+                env.tracker.rewards -= reward
                 env.tracker.obstacle_encountered += 1
-                env.tracker.neg_rewards += 1
+                env.tracker.neg_rewards += reward
             elif reward > 0:
-                env.tracker.rewards += 1
+                env.tracker.rewards += reward
                 env.tracker.rewards_per_ep += reward
-                env.tracker.pos_rewards += 1
+                env.tracker.pos_rewards += reward
                 env.tracker.goal_count += 1
 
         if ep % agent.target_sync_freq == 0:
@@ -81,6 +80,7 @@ def simulate():
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
+            # env.tracker.print_optimal_path()
             
         agent.decay_e() 
 
@@ -100,10 +100,7 @@ if __name__ == "__main__":
     # trained_agent.save(agent_name="test", save_memory=True)
 
     # Visuals
-    visual = Visualizer(
-        agent=trained_agent,
-        env=trained_env
-    )
-    # visual.eqlbpqw_visualize_learned_path(save_fig=True)
+    visual = Visualizer(agent=trained_agent, env=trained_env)
+    visual.eqlbpqw_visualize_learned_path(save_fig=True)
 
     tracemalloc.stop()
