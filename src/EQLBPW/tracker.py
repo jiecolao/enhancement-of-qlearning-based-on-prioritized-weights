@@ -29,7 +29,11 @@ class EnvironmentTracker:
         self.shortest_recorded_steps = 0
         self.path_per_ep = []
 
-        self.log_folder = "src/EQLBPW/training_logs"
+        self.log_folder = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "EQLBPW",
+            "training_logs",
+        )
         os.makedirs(self.log_folder, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -63,7 +67,7 @@ class EnvironmentTracker:
         )
 
     def _manage_log_limit(self, max_logs):
-        search_pattern = os.path.join(self.log_folder, "log_*.txt")
+        search_pattern = os.path.join(self.log_folder, "eqlbpw_*.txt")
         existing_logs = glob.glob(search_pattern)
         
         existing_logs.sort(key=os.path.getmtime)
