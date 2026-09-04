@@ -33,7 +33,7 @@ class EnvironmentTracker:
         os.makedirs(self.log_folder, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_filename = f"log_{timestamp}.txt"
+        self.log_filename = f"qlbpw_{timestamp}.txt"
         self.full_log_path = os.path.join(self.log_folder, self.log_filename)
         self._manage_log_limit(max_logs=10)
         self._print_and_log(self._agent_details())
