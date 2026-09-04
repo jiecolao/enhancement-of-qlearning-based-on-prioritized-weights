@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 import tracemalloc
 import torch
 import numpy as np
@@ -27,13 +28,13 @@ class Visualizer:
         while len(existing_figures) >= self.max_figures:
             os.remove(existing_figures.pop(0))
 
-    def _save_to_eqlbpqw(
+    def _save_to_eqlbpw(
             self, 
             title=None, 
             fig=None
         ):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        figure_dir = "src/EQLBPW/figures"
+        figure_dir = Path(__file__).resolve().parent / "EQLBPW" / "figures"
         os.makedirs(figure_dir, exist_ok=True)
         self._manage_figure_limit(figure_dir)
 
@@ -52,7 +53,7 @@ class Visualizer:
             fig=None
         ):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        figure_dir = "src/QLBPW/figures"
+        figure_dir = Path(__file__).resolve().parent / "QLBPW" / "figures"
         os.makedirs(figure_dir, exist_ok=True)
         self._manage_figure_limit(figure_dir)
 
@@ -65,35 +66,36 @@ class Visualizer:
         (fig or plt.gcf()).savefig(filepath, dpi=100, bbox_inches='tight')
         print(f"\nVisualization saved to: {filepath}") 
 
-    def visualize_learned_path(
-            self, 
-            Q, 
+    def qlbpw_visualize_learned_path( 
+            self,
+            agent,
+            env,
             title="Q-Learning Optimal Path",
             save_fig=False
         ):
-        curr_state = self.start_state
+        curr_state = env.start_state
         path = [curr_state]
         is_terminal = False
         steps = 0
-        max_steps = (self.grid_rows * self.grid_cols) * 2
+        max_steps = (env.grid_rows * env.grid_cols) * 2
 
         while not is_terminal and steps < max_steps:
-            if curr_state not in Q:
+            if curr_state not in agent.Q:
                 break
-            best_action = np.argmax(Q[curr_state])
-            next_state, _, is_terminal = self.take_step(curr_state, best_action)
+            best_action = np.argmax(agent.Q[curr_state])
+            next_state, _, is_terminal = env.take_step(curr_state, best_action)
             path.append(next_state)
             curr_state = next_state
             steps += 1
 
         fig, ax = plt.subplots(figsize=(10, 10))
 
-        ax.set_xlim(-0.5, self.grid_cols - 0.5)
-        ax.set_ylim(self.grid_rows - 0.5, -0.5)
+        ax.set_xlim(-0.5, env.grid_cols - 0.5)
+        ax.set_ylim(env.grid_rows - 0.5, -0.5)
         ax.set_aspect('equal')
         ax.grid(True, alpha=0.3)
 
-        for obs in self.obstacles:
+        for obs in env.obstacles:
             rect = patches.Rectangle((obs[0] - 0.5, obs[1] - 0.5), 1, 1,
                                     linewidth=1, edgecolor='black', facecolor='black')
             ax.add_patch(rect)
@@ -104,8 +106,8 @@ class Visualizer:
             ax.plot(path_x, path_y, 'g-', linewidth=2, alpha=0.6, label='Learned Path')
             ax.scatter(path_x, path_y, c='green', s=20, alpha=0.5)
 
-        ax.scatter(*self.goal_state, c='red', s=300, marker='*', label='Goal', zorder=5)
-        ax.scatter(*self.start_state, c='blue', s=200, marker='o', label='Start', zorder=5)
+        ax.scatter(*env.end_state, c='red', s=300, marker='*', label='Goal', zorder=5)
+        ax.scatter(*env.start_state, c='blue', s=200, marker='o', label='Start', zorder=5)
 
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
@@ -116,7 +118,7 @@ class Visualizer:
         print(f"Path length: {len(path) - 1} steps")
         
         if save_fig:
-            self._save_to_eqlbpqw(title=title, fig=fig)
+            self._save_to_qlbpw(title=title, fig=fig)
         plt.show()
 
     def eqlbpqw_visualize_learned_path(
@@ -186,7 +188,7 @@ class Visualizer:
         print(f"Path length: {len(path) - 1} steps")
 
         if save_fig:
-            self._save_to_eqlbpqw(title=title, fig=fig)
+            self._save_to_eqlbpw(title=title, fig=fig)
         plt.show()
 
     def plot_line(
@@ -214,7 +216,7 @@ class Visualizer:
         if save_fig and algo == "qlbpw":
             self._save_to_qlbpw(title=title, fig=fig)
         elif save_fig and algo == "eqlbpqw":
-            self._save_to_eqlbpqw(title=title, fig=fig)
+            self._save_to_eqlbpw(title=title, fig=fig)
 
         plt.show()
 
@@ -243,7 +245,7 @@ class Visualizer:
         if save_fig and algo == "qlbpw":
             self._save_to_qlbpw(title=title, fig=fig)
         elif save_fig and algo == "eqlbpqw":
-            self._save_to_eqlbpqw(title=title, fig=fig)
+            self._save_to_eqlbpw(title=title, fig=fig)
 
         plt.show()
 
@@ -274,7 +276,7 @@ class Visualizer:
         if save_fig and algo == "qlbpw":
             self._save_to_qlbpw(title=title, fig=fig)
         elif save_fig and algo == "eqlbpqw":
-            self._save_to_eqlbpqw(title=title, fig=fig)
+            self._save_to_eqlbpw(title=title, fig=fig)
 
         plt.show()
 
@@ -300,7 +302,7 @@ class Visualizer:
         if save_fig and algo == "qlbpw":
             self._save_to_qlbpw(title=title, fig=fig)
         elif save_fig and algo == "eqlbpqw":
-            self._save_to_eqlbpqw(title=title, fig=fig)
+            self._save_to_eqlbpw(title=title, fig=fig)
 
         plt.show()
 
@@ -326,7 +328,7 @@ class Visualizer:
         if save_fig and algo == "qlbpw":
             self._save_to_qlbpw(title=title, fig=fig)
         elif save_fig and algo == "eqlbpqw":
-            self._save_to_eqlbpqw(title=title, fig=fig)
+            self._save_to_eqlbpw(title=title, fig=fig)
 
         plt.show()
 
@@ -357,30 +359,23 @@ class Visualizer:
         if save_fig and algo == "qlbpw":
             self._save_to_qlbpw(title=title, fig=fig)
         elif save_fig and algo == "eqlbpqw":
-            self._save_to_eqlbpqw(title=title, fig=fig)
+            self._save_to_eqlbpw(title=title, fig=fig)
 
         plt.show()
 
     def compare_plot_line(
-            self,
-            x,
-            series,
-            title="Comparison Line Plot",
-            xlabel="X Axis",
-            ylabel="Y Axis",
-            save_fig=False,
-        ):
-        """Plot several named series on one set of axes."""
-        if not isinstance(series, dict) or not series:
-            raise ValueError("series must be a non-empty dictionary of label to values")
-
-        x = np.asarray(x)
+        self,
+        x,
+        series,
+        title="Comparison",
+        xlabel="X Axis",
+        ylabel="Value",
+        save_fig=False,
+    ):
         fig, ax = plt.subplots(figsize=(8, 4.5))
+
         for label, values in series.items():
-            values = np.asarray(values)
-            if len(values) != len(x):
-                raise ValueError(f"Series '{label}' must have the same length as x")
-            ax.plot(x, values, linewidth=2, marker="o", label=label)
+            ax.plot(x, values, marker="o", linewidth=2, label=label)
 
         ax.set_title(title, fontsize=12, fontweight="bold")
         ax.set_xlabel(xlabel)
@@ -390,7 +385,7 @@ class Visualizer:
         fig.tight_layout()
 
         if save_fig:
-            self._save_to_eqlbpqw(title=title, fig=fig)
+            self._save_to_eqlbpw(title=title, fig=fig)
 
         plt.show()
 
