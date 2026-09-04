@@ -12,12 +12,12 @@ def simulate():
         beta=0.3,               # Beta
         e=1.0,                  # Epsilon
         e_min=0.1,              # Minimun Epsilon
-        e_decay=0.97,          # Epsilon Decay
+        e_decay=0.999,          # Epsilon Decay
         no_of_states=4,         # States
         no_of_actions=4,        # Actions: 1=up, 2=right, 3=down, 4=left 
         batch_size=64,          # The Number of Experiences To Be Sampled
-        max_buffer=1000,        # Max Number of Stored Experiences
-        target_sync_freq=5      # When should the Target Network sync
+        max_buffer=10000,        # Max Number of Stored Experiences
+        target_sync_freq=1      # When should the Target Network sync
     )
 
     env = Environment(
@@ -25,7 +25,7 @@ def simulate():
         start_state = (4, 0),                           # Agent Starting Position
         end_state = (15, 13),                           # Finish Line
         agent = agent,                                  # Agent
-        episodes = 1,                                   # Episodes to train
+        episodes = 2,                                   # Episodes to train
         no_of_obstacles = 0,                            # Number of obstacles to appear. (To spawn, set is_dynamic_obs to True)
         static_obstacles = OBSTACLES[1]["obstacles"],   # Premade obstacles
         is_dynamic_obs = True,                          # Obstacle Event Trigger
@@ -84,28 +84,26 @@ def simulate():
             
         agent.decay_e() 
 
-        if ep == env.episodes-1:     
-            elapsed_time = time.time() - start_time
-            print(f"EQLBPW Total Runtime: {elapsed_time:.2f} seconds")
-            print(f"EQLBPW Total Rewards: {env.tracker.rewards}")
-
     return agent, env
 
 if __name__ == "__main__":
     print("\n" + "="*40)
     print("EQLBPW Simulation")
     print("="*40)
+
     tracemalloc.start()
     start_time = time.time()
-
     trained_agent, trained_env = simulate()
 
-    # Visuals
     trained_env.tracker.print_optimal_path()
+    trained_env.tracker.print_total_summary(start_time=start_time)
+    # trained_agent.save(agent_name="test", save_memory=True)
+
+    # Visuals
     visual = Visualizer(
         agent=trained_agent,
         env=trained_env
     )
     # visual.eqlbpqw_visualize_learned_path(save_fig=True)
-    
+
     tracemalloc.stop()

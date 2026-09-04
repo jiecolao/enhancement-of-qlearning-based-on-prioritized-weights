@@ -6,6 +6,7 @@ import numpy as np
 import tracemalloc
 import os
 import glob
+import time
 
 if TYPE_CHECKING: from environment import Environment
 
@@ -163,6 +164,15 @@ class EnvironmentTracker:
         self.steps_per_ep = 0
         self.rewards_per_ep = 0
 
+    def print_total_summary(self, start_time):
+        elapsed_time = time.time() - start_time
+
+        text = (
+            f"\nQLBPW Total Runtime: {elapsed_time:.2f} seconds\n"
+            f"QLBPW Total Rewards: {self.env.tracker.rewards}"
+        )
+
+        self._print_and_log(text=text)
 
 if __name__ == "__main__":
     tracemalloc.start()

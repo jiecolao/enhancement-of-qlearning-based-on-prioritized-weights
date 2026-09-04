@@ -118,7 +118,9 @@ if __name__ == "__main__":
 
     trained_agent, trained_env = simulate()
 
-    # Visuals
     trained_env.tracker.print_optimal_path()
+    trained_env.tracker.print_total_summary(start_time=start_time)
+
+    # Visuals
 
     tracemalloc.stop()
