@@ -7,10 +7,7 @@
 *.png
 tests/*
 
-src/QLBPW/training_logs
-src/QLBPW/trained_agents
-
-src/EQLBPW/training_logs
-src/EQLBPW/trained_agents
+src/**/training_logs
+src/**/trained_agents
 
 .env
