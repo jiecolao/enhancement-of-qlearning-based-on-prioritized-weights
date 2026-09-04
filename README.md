@@ -27,5 +27,10 @@ Wang, C., et al. (2022). Improved Q-Learning Applied to Dynamic Obstacle Avoidan
 
 ## HOW TO RUN:
 - cd src
+- streamlit run app.py
 - python -m EQLBPW.simulator
 - python -m QLBPW.simulator
+
+The Streamlit dashboard uses the sidebar to switch between EQLBPW and QLBPW.
+Install the dependencies from `requirements.txt`, including Streamlit and PyTorch
+for the EQLBPW section.
