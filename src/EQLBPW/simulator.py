@@ -1,9 +1,9 @@
 from environment import Environment
 from agent import Agent
-import time
 from env_settings import OBSTACLES
-from utility import *
 from visualizer import Visualizer
+import time
+import tracemalloc
 
 def simulate():
     agent = Agent(
