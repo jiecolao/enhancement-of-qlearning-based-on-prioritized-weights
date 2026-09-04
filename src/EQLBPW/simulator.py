@@ -24,7 +24,7 @@ def simulate():
         start_state = (4, 0),                           # Agent Starting Position
         end_state = (16, 7),                           # Finish Line
         agent = agent,                                  # Agent
-        episodes = 100,                                   # Episodes to train
+        episodes = 20,                                   # Episodes to train
         ep_tracker = 5,                                 # How and when should the tracker print the summary
         no_of_obstacles = 0,                            # Number of obstacles to appear. (To spawn, set is_dynamic_obs to True)
         static_obstacles = OBSTACLES[1]["obstacles"],   # Premade obstacles

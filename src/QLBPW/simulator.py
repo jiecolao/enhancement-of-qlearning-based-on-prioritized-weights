@@ -1,6 +1,7 @@
 from .environment import Environment
 from .agent import Agent
 from env_settings import OBSTACLES
+from visualizer import Visualizer
 import tracemalloc
 import numpy as np
 import time
@@ -20,14 +21,14 @@ def simulate():
     )
 
     env = Environment(
-        grid=9,
-        start_state=(0, 0),
-        end_state=(8, 1),
+        grid=20,
+        start_state=(4, 0),
+        end_state=(16, 7),
         agent=agent,
-        episodes=15,
+        episodes=20,
         ep_tracker=5,
         no_of_obstacles=0,
-        static_obstacles= OBSTACLES[0]["obstacles"],
+        static_obstacles= OBSTACLES[1]["obstacles"],
         is_dynamic_obs=True
     )
 
@@ -124,5 +125,7 @@ if __name__ == "__main__":
     # trained_agent.save(agent_name="test", save_memory=True)
 
     # Visuals
+    visual = Visualizer(agent=trained_agent, env=trained_env)
+    visual.qlbpw_visualize_learned_path(agent=trained_agent, env=trained_env, save_fig=True)
 
     tracemalloc.stop()
