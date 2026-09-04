@@ -156,3 +156,30 @@ ENVIRONMNENT = [
 
     },
 ]
+
+
+# Normalized presets used by the Streamlit dashboard.  OBSTACLES remains
+# available for the existing simulators and comparison scripts.
+PRESET_ENVIRONMENTS = [
+    {
+        'name': 'QLBPW (9x9)',
+        'grid_size': 9,
+        'start_state': (0, 0),
+        'end_state': (8, 8),
+        'obstacles': OBSTACLES[0]['obstacles'],
+    },
+    {
+        'name': 'Intramuros (20x20)',
+        'grid_size': 20,
+        'start_state': (4, 0),
+        'end_state': (16, 7),
+        'obstacles': OBSTACLES[1]['obstacles'],
+    },
+    {
+        'name': 'Empty test (10x10)',
+        'grid_size': 10,
+        'start_state': (0, 0),
+        'end_state': (9, 9),
+        'obstacles': OBSTACLES[2]['obstacles'],
+    },
+]
