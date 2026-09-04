@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from datetime import datetime
-from agent import Agent
+from .agent import Agent
 import numpy as np
 import tracemalloc
 import os
@@ -149,7 +149,7 @@ class EnvironmentTracker:
             f"{'Epsilon:':<30}| {epsilon:.3f}\n"
             f"{f'Steps per {ep_tracker} episode:':<30}| {self.steps_per_ep} / {max_steps*max_ep}\n"
             f"{f'Rewards per {ep_tracker} episode:':<30}| {self.rewards_per_ep}\n"
-            f"{'Episode Completion Time:':<30}| {elapsed:.2f} seconds\n"
+            f"{f'{ep_tracker} Episode Completion Time:':<30}| {elapsed:.2f} seconds\n"
             f"{'Memory usage:':<30}| Current: {current / (1024 * 1024):.2f} MB, Peak: {peak / (1024 * 1024):.2f} MB\n"
             f"{'Total Steps:':<30}| {self.steps}\n"
             f"{'Total Obstacles Encountered:':<30}| {self.obstacle_encountered}\n"

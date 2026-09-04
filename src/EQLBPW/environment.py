@@ -1,5 +1,5 @@
-from EQLBPW.agent import Agent
-from tracker import EnvironmentTracker
+from .agent import Agent
+from .tracker import EnvironmentTracker
 import random
 
 class Environment:

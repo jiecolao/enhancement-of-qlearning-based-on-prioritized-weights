@@ -1,5 +1,5 @@
-from environment import Environment
-from agent import Agent
+from .environment import Environment
+from .agent import Agent
 from env_settings import OBSTACLES
 import tracemalloc
 import numpy as np
