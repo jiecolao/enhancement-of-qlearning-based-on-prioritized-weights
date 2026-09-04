@@ -25,8 +25,8 @@ def simulate():
         start_state = (4, 0),                           # Agent Starting Position
         end_state = (15, 13),                           # Finish Line
         agent = agent,                                  # Agent
-        episodes = 2,                                   # Episodes to train
-        ep_tracker = 1,                                 # How and when should the tracker print the summary
+        episodes = 10,                                   # Episodes to train
+        ep_tracker = 2,                                 # How and when should the tracker print the summary
         no_of_obstacles = 0,                            # Number of obstacles to appear. (To spawn, set is_dynamic_obs to True)
         static_obstacles = OBSTACLES[1]["obstacles"],   # Premade obstacles
         is_dynamic_obs = True,                          # Obstacle Event Trigger
@@ -37,11 +37,12 @@ def simulate():
 
     for ep in range(env.episodes):
         env.agent_pos = env.start_state 
+        episode_number = ep + 1
         episode_reward = 0.0
         is_terminal = False
 
         # Tracker
-        if ep % env.ep_tracker == 0:
+        if episode_number % env.ep_tracker == 0:
             episode_start_time = time.time()
 
         while not is_terminal and env.tracker.steps_per_ep <= env.max_steps:
@@ -70,10 +71,10 @@ def simulate():
         if ep % agent.target_sync_freq == 0:
             agent.sync_target()
 
-        if ep % env.ep_tracker == 0:
+        if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - episode_start_time
             env.tracker.print_episode_summary(
-                curr_ep=ep,
+                curr_ep=episode_number,
                 max_ep=env.episodes,
                 ep_tracker=env.ep_tracker,
                 elapsed=elapsed,

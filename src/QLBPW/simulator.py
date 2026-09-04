@@ -35,10 +35,11 @@ def simulate():
     env.tracker.print_live_grid(env.agent_pos)
 
     for ep in range(env.episodes):
+        episode_number = ep + 1
         env.agent_pos = env.start_state
         is_terminal = False
 
-        if ep % env.ep_tracker == 0:
+        if episode_number % env.ep_tracker == 0:
             episode_start_time = time.time()
 
         while not is_terminal and env.tracker.steps_per_ep <= env.max_steps:
@@ -95,10 +96,10 @@ def simulate():
                 env.tracker.pos_rewards += reward
                 env.tracker.goal_count += 1
 
-        if ep % env.ep_tracker == 0:
+        if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - episode_start_time
             env.tracker.print_episode_summary(
-                curr_ep=ep, 
+            curr_ep=episode_number, 
                 max_ep=env.episodes, 
                 ep_tracker=env.ep_tracker,
                 elapsed=elapsed,
