@@ -361,6 +361,39 @@ class Visualizer:
 
         plt.show()
 
+    def compare_plot_line(
+            self,
+            x,
+            series,
+            title="Comparison Line Plot",
+            xlabel="X Axis",
+            ylabel="Y Axis",
+            save_fig=False,
+        ):
+        """Plot several named series on one set of axes."""
+        if not isinstance(series, dict) or not series:
+            raise ValueError("series must be a non-empty dictionary of label to values")
+
+        x = np.asarray(x)
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+        for label, values in series.items():
+            values = np.asarray(values)
+            if len(values) != len(x):
+                raise ValueError(f"Series '{label}' must have the same length as x")
+            ax.plot(x, values, linewidth=2, marker="o", label=label)
+
+        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.grid(True, linestyle="--", alpha=0.6)
+        ax.legend()
+        fig.tight_layout()
+
+        if save_fig:
+            self._save_to_eqlbpqw(title=title, fig=fig)
+
+        plt.show()
+
 
 if __name__=="__main__":
     vis = Visualizer(None, None)
