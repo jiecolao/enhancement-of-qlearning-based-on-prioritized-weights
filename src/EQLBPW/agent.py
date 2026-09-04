@@ -1,9 +1,11 @@
 from collections import deque
+from datetime import datetime
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import random
+import os
 
 class QNetwork(nn.Module):
     # OBJ 3: Double Deep Q-Learning
@@ -85,6 +87,46 @@ class Agent:
         self.max_buffer = max_buffer        # Max Number of Stored Experiences
         self.target_sync_freq = target_sync_freq  # How often the target network should sync with main 
 
+    def save(self, agent_name, save_memory=True):
+        filepath = "src/EQLBPW/trained_agents"
+        os.makedirs(filepath, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        if agent_name:
+            filename = f"{agent_name}_{timestamp}.pth"
+        else: 
+            filename = f"log_{timestamp}.pth"
+
+        full_path = os.path.join(filepath, filename)
+
+        checkpoint = {
+            'main_net_state_dict': self.main_net.state_dict(),
+            'target_net_state_dict': self.target_net.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'epsilon': self.e,
+            'memory': list(self.memory.buffer) if save_memory else None
+        }
+        torch.save(checkpoint, full_path)
+        print(f"Agent saved successfully to '{filepath}' (Memory saved: {save_memory})")
+
+    def load(self, filepath="dqn_agent.pth", load_memory=True):
+        checkpoint = torch.load(filepath)
+        
+        self.main_net.load_state_dict(checkpoint['main_net_state_dict'])
+        self.target_net.load_state_dict(checkpoint['target_net_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.e = checkpoint.get('epsilon', self.e_min)
+        
+        if load_memory and checkpoint.get('memory') is not None:
+            self.memory.buffer.clear()
+            for transition in checkpoint['memory']:
+                self.memory.buffer.append(transition)
+                
+        self.main_net.eval()
+        self.target_net.eval()
+        print(f"Agent loaded successfully from '{filepath}'")
+
     def adjust_alpha(self):
         pass
 
@@ -121,8 +163,6 @@ class Agent:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
-        # self._decay_e()
 
     def _test(self):
         print("agent.py acccessed!")
