@@ -1,4 +1,7 @@
 from collections import deque
+from datetime import datetime
+import os
+import pickle
 import random
 import numpy as np
 
@@ -54,6 +57,61 @@ class Agent:
         self.memory = ReplayBuffer(max_buffer=max_buffer, batch_size=batch_size)
         self.batch_size = batch_size    # The Number of Experiences To Be Sampled
         self.max_buffer = max_buffer    # Max Number of Stored Experiences
+
+    def save(self, agent_name=None, save_memory=True):
+        filepath = "src/QLBPW/trained_agents"
+        os.makedirs(filepath, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{agent_name}_{timestamp}.pkl" if agent_name else f"agent_{timestamp}.pkl"
+        full_path = os.path.join(filepath, filename)
+
+        checkpoint = {
+            "q_table": self.Q,
+            "alpha": self.alpha,
+            "init_alpha": self.init_alpha,
+            "gamma": self.gamma,
+            "beta": self.beta,
+            "epsilon": self.e,
+            "epsilon_min": self.e_min,
+            "epsilon_decay": self.e_decay,
+            "no_of_actions": self.no_of_actions,
+            "batch_size": self.batch_size,
+            "max_buffer": self.max_buffer,
+            "memory": list(self.memory.buffer) if save_memory else None,
+            "python_random_state": random.getstate(),
+            "numpy_random_state": np.random.get_state(),
+        }
+
+        with open(full_path, "wb") as checkpoint_file:
+            pickle.dump(checkpoint, checkpoint_file)
+
+        print(f"Agent saved successfully to '{full_path}' (Memory saved: {save_memory})")
+        return full_path
+
+    def load(self, filepath, load_memory=True):
+        with open(filepath, "rb") as checkpoint_file:
+            checkpoint = pickle.load(checkpoint_file)
+
+        self.Q = checkpoint["q_table"]
+        self.alpha = checkpoint.get("alpha", self.alpha)
+        self.init_alpha = checkpoint.get("init_alpha", self.init_alpha)
+        self.gamma = checkpoint.get("gamma", self.gamma)
+        self.beta = checkpoint.get("beta", self.beta)
+        self.e = checkpoint.get("epsilon", self.e)
+        self.e_min = checkpoint.get("epsilon_min", self.e_min)
+        self.e_decay = checkpoint.get("epsilon_decay", self.e_decay)
+
+        if load_memory and checkpoint.get("memory") is not None:
+            self.memory.buffer.clear()
+            self.memory.buffer.extend(checkpoint["memory"])
+
+        if "python_random_state" in checkpoint:
+            random.setstate(checkpoint["python_random_state"])
+        if "numpy_random_state" in checkpoint:
+            np.random.set_state(checkpoint["numpy_random_state"])
+
+        print(f"Agent loaded successfully from '{filepath}'")
 
     def update_Q(
             self, 

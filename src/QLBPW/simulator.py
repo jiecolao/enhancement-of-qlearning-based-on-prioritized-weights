@@ -120,6 +120,7 @@ if __name__ == "__main__":
 
     trained_env.tracker.print_optimal_path()
     trained_env.tracker.print_total_summary(start_time=start_time)
+    # trained_agent.save(agent_name="test", save_memory=True)
 
     # Visuals
 
