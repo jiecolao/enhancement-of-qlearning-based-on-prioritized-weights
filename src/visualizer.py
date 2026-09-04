@@ -5,12 +5,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
+import glob
 
 
 class Visualizer:
-    def __init__(self, agent, env):
+    def __init__(self, agent, env, max_figures=10):
         self.agent = agent
         self.env = env
+
+        self.max_figures = max_figures
+
+    def _manage_figure_limit(self, figure_dir):
+        image_patterns = ("*.png", "*.jpg", "*.jpeg")
+        existing_figures = [
+            filepath
+            for pattern in image_patterns
+            for filepath in glob.glob(os.path.join(figure_dir, pattern))
+        ]
+        existing_figures.sort(key=os.path.getmtime)
+
+        while len(existing_figures) >= self.max_figures:
+            os.remove(existing_figures.pop(0))
 
     def _save_to_eqlbpqw(
             self, 
@@ -20,6 +35,7 @@ class Visualizer:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         figure_dir = "src/EQLBPW/figures"
         os.makedirs(figure_dir, exist_ok=True)
+        self._manage_figure_limit(figure_dir)
 
         if title:
             filename = f"{title}_{timestamp}.png"
@@ -38,6 +54,7 @@ class Visualizer:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         figure_dir = "src/QLBPW/figures"
         os.makedirs(figure_dir, exist_ok=True)
+        self._manage_figure_limit(figure_dir)
 
         if title:
             filename = f"{title}_{timestamp}.png"
