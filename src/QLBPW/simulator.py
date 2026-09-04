@@ -25,12 +25,12 @@ def simulate():
         end_state=(8, 1),
         agent=agent,
         episodes=15,
+        ep_tracker=5,
         no_of_obstacles=0,
         static_obstacles= OBSTACLES[0]["obstacles"],
         is_dynamic_obs=True
     )
 
-    ep_tracker = 1
     env.generate_obstacles()
     env.tracker.print_live_grid(env.agent_pos)
 
@@ -38,7 +38,7 @@ def simulate():
         env.agent_pos = env.start_state
         is_terminal = False
 
-        if ep % ep_tracker == 0:
+        if ep % env.ep_tracker == 0:
             episode_start_time = time.time()
 
         while not is_terminal and env.tracker.steps_per_ep <= env.max_steps:
@@ -95,12 +95,12 @@ def simulate():
                 env.tracker.pos_rewards += reward
                 env.tracker.goal_count += 1
 
-        if ep % ep_tracker == 0:
+        if ep % env.ep_tracker == 0:
             elapsed = time.time() - episode_start_time
             env.tracker.print_episode_summary(
                 curr_ep=ep, 
                 max_ep=env.episodes, 
-                ep_tracker=ep_tracker,
+                ep_tracker=env.ep_tracker,
                 elapsed=elapsed,
                 max_steps=env.max_steps,
                 epsilon=agent.e

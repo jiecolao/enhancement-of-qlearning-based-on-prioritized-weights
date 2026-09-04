@@ -10,6 +10,7 @@ class Environment:
             end_state,
             agent: Agent,
             episodes,
+            ep_tracker,
             no_of_obstacles,
             static_obstacles,
             is_dynamic_obs = False,
@@ -23,6 +24,7 @@ class Environment:
 
         self.agent = agent
         self.episodes = episodes
+        self.ep_tracker = ep_tracker
 
         self.no_of_obstacles = no_of_obstacles
         self.static_obstacles = static_obstacles
@@ -87,7 +89,7 @@ class Environment:
             reward = 1
             is_terminal = True
         else:
-            reward = 0
+            reward = -0.05
         return next_state, reward, is_terminal
 
     def _test(self):

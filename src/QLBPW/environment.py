@@ -10,6 +10,7 @@ class Environment:
             end_state,
             agent: Agent,
             episodes,
+            ep_tracker,
             no_of_obstacles,
             static_obstacles,
             is_dynamic_obs = False,
@@ -22,6 +23,7 @@ class Environment:
 
         self.agent = agent
         self.episodes = episodes
+        self.ep_tracker = ep_tracker
 
         self.no_of_obstacles = no_of_obstacles
         self.static_obstacles = static_obstacles
