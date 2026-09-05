@@ -216,35 +216,61 @@ class EnvironmentTracker:
         path = [curr_state]
         is_terminal = False
         steps = 0
-        max_steps = (self.env.grid_rows * self.env.grid_cols) * 2
+        max_steps = self.env.max_steps
 
         was_training = self.agent.main_net.training
         original_agent_pos = self.env.agent_pos
+        original_env_steps = self.env.steps
+
         self.agent.main_net.eval()
+
         try:
             with torch.no_grad():
                 while not is_terminal and steps < max_steps:
                     self.env.agent_pos = curr_state
+
                     state_tensor = torch.as_tensor(
-                        self.env.get_state(), dtype=torch.float32
+                        self.env.get_state(),
+                        dtype=torch.float32
                     ).unsqueeze(0)
-                    best_action = self.agent.main_net(state_tensor).argmax(dim=1).item()
-                    next_state, _, is_terminal, _ = self.env.take_step(
-                        curr_state, best_action
+
+                    best_action = (
+                        self.agent.main_net(state_tensor)
+                        .argmax(dim=1)
+                        .item()
                     )
+
+                    next_state, _, is_terminal, _ = self.env.take_step(
+                        curr_state,
+                        best_action
+                    )
+
                     path.append(next_state)
                     curr_state = next_state
                     steps += 1
+
         finally:
             self.env.agent_pos = original_agent_pos
+            self.env.steps = original_env_steps
             self.agent.main_net.train(was_training)
 
-        path_lines = ["", "="*40, "LEARNED GREEDY PATH", "="*40]
-        if curr_state != self.env.end_state:
-            path_lines.append("<!> Warning: Agent got stuck and didn't reach the goal.")
+        reached_goal = curr_state == self.env.end_state
+
+        path_lines = [
+            "",
+            "=" * 40,
+            "LEARNED GREEDY PATH",
+            "=" * 40
+        ]
+
+        if not reached_goal:
+            path_lines.append(
+                "<!> Warning: Agent did not reach the goal."
+            )
 
         for y in range(self.env.grid_rows):
             row_str = ""
+
             for x in range(self.env.grid_cols):
                 state = (x, y)
 
@@ -258,25 +284,28 @@ class EnvironmentTracker:
                     row_str += " + "
                 else:
                     row_str += " . "
+
             path_lines.append(row_str)
 
-        if self.shortest_path_steps is not None and steps > 0:
+        if reached_goal and self.shortest_path_steps is not None and steps > 0:
             optimality = self.shortest_path_steps / steps
+            optimality_text = f"{optimality * 100:.2f}%"
         else:
-            optimality = 0.0
+            optimality_text = "N/A"
 
         path_lines.extend((
             "",
             f"Steps taken: {steps}",
+            f"Reached goal: {'Yes' if reached_goal else 'No'}",
             f"Shortest valid path: {self.shortest_path_steps}",
-            f"Optimality: {optimality * 100:.2f}%",
-            "="*40  
+            f"Optimality: {optimality_text}",
+            "=" * 40
         ))
-
-        
 
         path_text = "\n".join(path_lines)
         self._print_and_log(path_text)
+
+
 
     def print_episode_summary(
             self, 
