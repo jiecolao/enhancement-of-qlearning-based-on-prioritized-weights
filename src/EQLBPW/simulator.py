@@ -6,68 +6,125 @@ import time
 import tracemalloc
 
 def simulate():
+    state_dim = 29
+    learning_rate = 0.0005
+    gamma = 0.95
+    priority_alpha = 0.6
+    beta_start = 0.4
+    beta_end = 1.0
+    e = 1.0
+    e_min = 0.05
+    e_decay = 0.995
+    no_of_actions = 4
+    batch_size = 64
+    max_buffer = 50000
+    target_sync_freq = 20
+
+    collision_weight = 1.0
+    goal_weight = 2.0
+    distance_weight = 0.5
+
     agent = Agent(
-        alpha=0.001,              # Learning Rate
-        gamma=0.95,              # Discount Factor
-        beta=0.3,               # Beta
-        e=1.0,                  # Epsilon
-        e_min=0.05,              # Minimun Epsilon
-        e_decay=0.97,          # Epsilon Decay
-        no_of_actions=4,        # Actions: 1=up, 2=right, 3=down, 4=left 
-        batch_size=64,          # The Number of Experiences To Be Sampled
-        max_buffer=10000,        # Max Number of Stored Experiences
-        target_sync_freq=5      # When should the Target Network sync
+        state_dim=state_dim,
+        action_dim=no_of_actions,
+        learning_rate=learning_rate,
+        gamma=gamma,
+        priority_alpha=priority_alpha,
+        beta_start=beta_start,
+        beta_end=beta_end,
+        e=e,
+        e_min=e_min,
+        e_decay=e_decay,
+        max_buffer=max_buffer,
+        batch_size=batch_size,
+        target_sync_freq=target_sync_freq,
+        collision_weight=collision_weight,
+        goal_weight=goal_weight,
+        distance_weight=distance_weight,
     )
 
+    grid = 20
+    start = (4, 0)
+    end = (9, 19)
+    episodes = 2000
+    ep_tracker = 10
+    no_of_obstacles = 0
+    static_obstacles = OBSTACLES[1]["obstacles"]
+    is_dynamic_obs = False
+
     env = Environment(
-        grid = 20,                                      # Grid Environment gridxgrid
-        start_state = (4, 0),                           # Agent Starting Position
-        end_state = (16, 7),                           # Finish Line
-        agent = agent,                                  # Agent
-        episodes = 20,                                   # Episodes to train
-        ep_tracker = 5,                                 # How and when should the tracker print the summary
-        no_of_obstacles = 0,                            # Number of obstacles to appear. (To spawn, set is_dynamic_obs to True)
-        static_obstacles = OBSTACLES[1]["obstacles"],   # Premade obstacles
-        is_dynamic_obs = True,                          # Obstacle Event Trigger
-    ) 
+        grid=grid,
+        start_state=start,
+        end_state=end,
+        agent=agent,
+        episodes=episodes,
+        ep_tracker=ep_tracker,
+        no_of_obstacles=no_of_obstacles,
+        static_obstacles=static_obstacles,
+        is_dynamic_obs=is_dynamic_obs,
+    )
 
     env.generate_obstacles()                            # Initialize obstacles
     env.tracker.print_live_grid(env.agent_pos)          # Display Grid in Terminal 
 
     for ep in range(env.episodes):
-        env.agent_pos = env.start_state 
+        state = env.reset()
+        is_terminal = False
+
         episode_number = ep + 1
         episode_reward = 0.0
-        is_terminal = False
 
         # Tracker
         if episode_number % env.ep_tracker == 0:
             episode_start_time = time.time()
 
         while not is_terminal and env.tracker.steps_per_ep < env.max_steps:
-            action = agent.e_greedy(env.agent_pos)
-            next_state, reward, is_terminal = env.take_step(env.agent_pos, action)
+            action = agent.e_greedy(state)
 
-            agent.memory.push(env.agent_pos, action, reward, next_state, is_terminal)
+            next_position, reward, is_terminal, info = env.take_step(env.agent_pos, action)
+
+            next_state = env.get_state()
+
+            agent.memory.push(
+                state=state,
+                action=action,
+                reward=reward,
+                next_state=next_state,
+                done=is_terminal,
+                collision=info["collision"],
+                goal=info["goal"],
+                distance_progress=info["distance_progress"],
+            )
+
             agent.update()
 
-            env.agent_pos = next_state
+            state = next_state
+
+            env.agent_pos = next_position
             episode_reward += reward
 
             # Trackers
             env.tracker.steps_per_ep += 1
             env.tracker.steps += 1
             if reward < 0:
-                env.tracker.rewards -= reward
-                env.tracker.obstacle_encountered += 1
+                env.tracker.rewards += reward
                 env.tracker.neg_rewards += reward
+
+                if info["collision"]:
+                    env.tracker.obstacle_encountered += 1
+
             elif reward > 0:
                 env.tracker.rewards += reward
                 env.tracker.rewards_per_ep += reward
                 env.tracker.pos_rewards += reward
                 env.tracker.goal_count += 1
 
-        if ep % agent.target_sync_freq == 0:
+        training_progress = ep / max(episodes - 1, 1)
+        agent.update_beta(training_progress)
+
+        agent.decay_e() 
+
+        if episode_number % agent.target_sync_freq == 0:
             agent.sync_target()
 
         if episode_number % env.ep_tracker == 0:
@@ -80,9 +137,8 @@ def simulate():
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
-            # env.tracker.print_optimal_path()
+            env.tracker.print_optimal_path()
             
-        agent.decay_e() 
 
     return agent, env
 
@@ -95,7 +151,7 @@ if __name__ == "__main__":
     start_time = time.time()
     trained_agent, trained_env = simulate()
 
-    trained_env.tracker.print_optimal_path()
+    # trained_env.tracker.print_optimal_path()
     trained_env.tracker.print_total_summary(start_time=start_time)
     # trained_agent.save(agent_name="test", save_memory=True)
 
