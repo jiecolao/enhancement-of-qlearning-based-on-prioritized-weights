@@ -261,7 +261,7 @@ class EnvironmentTracker:
             f"Steps taken: {steps}",
             f"Shortest valid path: {self.shortest_path_steps}",
             f"Optimality: {optimality * 100:.2f}%",
-            "="*40
+            "="*40  
         ))
 
         
@@ -293,9 +293,9 @@ class EnvironmentTracker:
             f"{'Total Steps:':<30}| {self.steps}\n"
             f"{'Total Obstacles Encountered:':<30}| {self.obstacle_encountered}\n"
             f"{'Total Goals:':<30}| {self.goal_count}\n"
-            f"{'Total Rewards:':<30}| {self.rewards}\n"
-            f"{' ├── Positive Rewards:':<30}| {self.pos_rewards}\n"
-            f"{' └── Negative Rewards:':<30}| {self.neg_rewards}\n"
+            f"{'Total Rewards:':<30}| {self.rewards:.2f}\n"
+            f"{' ├── Positive Rewards:':<30}| {self.pos_rewards:.2f}\n"
+            f"{' └── Negative Rewards:':<30}| {self.neg_rewards:.2f}\n"
             f"{'Shortest valid path:':<30}| "
 
             f"{self.shortest_path_steps if self.shortest_path_steps is not None else 'No path'}\n"
