@@ -5,6 +5,8 @@ ENHANCEMENTS:
 2. Decaying Epsilon
 3. Double Deep Q-learning
 
+DDQN+Prioritized Replay+Path-Aware Priority+Importance Sampling
+
 IMPROVED ALGORITHM
 I. Initialization
 	1. Initialize Replay Memory D to capacity N.
