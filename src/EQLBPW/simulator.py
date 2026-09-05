@@ -102,18 +102,20 @@ def simulate():
             # Trackers
             env.tracker.steps_per_ep += 1
             env.tracker.steps += 1
+            env.tracker.rewards += reward
+            env.tracker.rewards_per_ep += reward
+
             if reward < 0:
-                env.tracker.rewards += reward
                 env.tracker.neg_rewards += reward
 
                 if info["collision"]:
                     env.tracker.obstacle_encountered += 1
 
             elif reward > 0:
-                env.tracker.rewards += reward
-                env.tracker.rewards_per_ep += reward
                 env.tracker.pos_rewards += reward
-                env.tracker.goal_count += 1
+
+                if info["goal"]:
+                    env.tracker.goal_count += 1
 
         training_progress = ep / max(episodes - 1, 1)
         agent.update_beta(training_progress)
