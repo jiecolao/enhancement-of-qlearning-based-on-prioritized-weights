@@ -162,8 +162,6 @@ class EnvironmentTracker:
                 )
                 self.optimality_history.append(optimality)
 
-        self.rewards_per_ep = 0
-
     def get_success_rate(self):
         if not self.success_history:
             return 0.0
