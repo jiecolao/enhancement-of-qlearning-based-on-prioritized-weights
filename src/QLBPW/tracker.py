@@ -26,7 +26,6 @@ class EnvironmentTracker:
         self.steps_per_ep = 0
         self.rewards_per_ep = 0
 
-        self.shortest_recorded_steps = 0
         self.path_per_ep = []
         
         self.log_folder = os.path.join(
