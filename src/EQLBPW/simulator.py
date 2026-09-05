@@ -100,7 +100,6 @@ def simulate():
 
             state = next_state
 
-            env.agent_pos = next_position
             episode_reward += reward
 
             # Trackers
@@ -127,6 +126,7 @@ def simulate():
         if episode_number % agent.target_sync_freq == 0:
             agent.sync_target()
 
+        # Tracker
         if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - episode_start_time
             env.tracker.print_episode_summary(
@@ -137,8 +137,12 @@ def simulate():
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
-            env.tracker.print_optimal_path()
-            
+
+        if episode_number % 100 == 0:
+            env.tracker.print_learned_path()
+
+        # Tracker
+        env.tracker.record_episode(success = is_terminal and env.agent_pos == env.end_state)
 
     return agent, env
 
