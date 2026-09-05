@@ -8,7 +8,7 @@ import os
 import glob
 import time
 
-if TYPE_CHECKING: from environment import Environment
+if TYPE_CHECKING: from .environment import Environment
 
 class EnvironmentTracker:
 
@@ -318,7 +318,7 @@ class EnvironmentTracker:
 
         text = (
             f"\nEQLBPW Total Runtime: {elapsed_time:.2f} seconds\n"
-            f"EQLBPW Total Rewards: {self.env.tracker.rewards}"
+            f"EQLBPW Total Rewards: {self.rewards}"
         )
 
         self._print_and_log(text=text)
