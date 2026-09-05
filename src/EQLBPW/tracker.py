@@ -251,8 +251,6 @@ class EnvironmentTracker:
                     row_str += " . "
             path_lines.append(row_str)
 
-        path_lines.extend((f"", f"Steps taken: {len(path) - 1}", "="*40))
-
         if self.shortest_path_steps is not None and steps > 0:
             optimality = self.shortest_path_steps / steps
         else:

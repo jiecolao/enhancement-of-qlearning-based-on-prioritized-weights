@@ -72,7 +72,6 @@ def simulate():
         is_terminal = False
 
         episode_number = ep + 1
-        episode_reward = 0.0
 
         # Tracker
         if episode_number % env.ep_tracker == 0:
@@ -100,8 +99,6 @@ def simulate():
 
             state = next_state
 
-            episode_reward += reward
-
             # Trackers
             env.tracker.steps_per_ep += 1
             env.tracker.steps += 1
@@ -127,6 +124,8 @@ def simulate():
             agent.sync_target()
 
         # Tracker
+        env.tracker.record_episode(success = is_terminal and env.agent_pos == env.end_state)
+
         if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - episode_start_time
             env.tracker.print_episode_summary(
@@ -140,9 +139,6 @@ def simulate():
 
         if episode_number % 100 == 0:
             env.tracker.print_learned_path()
-
-        # Tracker
-        env.tracker.record_episode(success = is_terminal and env.agent_pos == env.end_state)
 
     return agent, env
 
