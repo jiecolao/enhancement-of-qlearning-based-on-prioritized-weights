@@ -133,23 +133,34 @@ class Visualizer:
         steps = 0
         max_steps = (self.env.grid_rows * self.env.grid_cols) * 2
 
-        self.agent.main_net.eval() 
+        original_agent_pos = self.env.agent_pos
+        was_training = self.agent.main_net.training
+        self.agent.main_net.eval()
 
-        while not is_terminal and steps < max_steps:
-            state_t = torch.FloatTensor(curr_state).unsqueeze(0) 
-            
-            with torch.no_grad(): 
-                best_action = self.agent.main_net(state_t).argmax().item() 
-                
-            next_state, _, is_terminal = self.env.take_step(curr_state, best_action)
-            
-            if np.array_equal(curr_state, next_state):
-                print("Agent got stuck! Ending path tracing.")
-                break
-                
-            path.append(next_state)
-            curr_state = next_state
-            steps += 1
+        try:
+            while not is_terminal and steps < max_steps:
+                self.env.agent_pos = curr_state
+                state_t = torch.as_tensor(
+                    self.env.get_state(), dtype=torch.float32
+                ).unsqueeze(0)
+
+                with torch.no_grad():
+                    best_action = self.agent.main_net(state_t).argmax().item()
+
+                next_state, _, is_terminal, _ = self.env.take_step(
+                    curr_state, best_action
+                )
+
+                if np.array_equal(curr_state, next_state):
+                    print("Agent got stuck! Ending path tracing.")
+                    break
+
+                path.append(next_state)
+                curr_state = next_state
+                steps += 1
+        finally:
+            self.env.agent_pos = original_agent_pos
+            self.agent.main_net.train(was_training)
 
         # Create visualization
         fig, ax = plt.subplots(figsize=(10, 10))
