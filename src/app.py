@@ -162,7 +162,7 @@ def train_eqlbpw(preset, settings, progress_bar, status_text, metrics,
 		metrics[1].metric("Last reward", f"{episode_reward:.2f}")
 		metrics[2].metric("Epsilon", f"{agent.e:.3f}")
 	agent.e = 0.0
-	environment.tracker.print_optimal_path()
+	environment.tracker.print_learned_path()
 	environment.tracker.print_total_summary(start_time=started)
 	refresh_tracker_log(log_placeholder, environment)
 	return agent, environment, rewards, time.time() - started
