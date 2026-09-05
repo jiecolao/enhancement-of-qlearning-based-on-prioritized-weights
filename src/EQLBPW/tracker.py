@@ -51,9 +51,13 @@ class EnvironmentTracker:
             "AGENT INITIALIZED\n"
             + "="*40 + "\n"
             f"{'Agent type:':<30}| {type(self.agent).__name__}\n"
-            f"{'Learning rate (alpha):':<30}| {self.agent.alpha}\n"
+            f"{'State dimensions:':<30}| {self.agent.state_dim}\n"
+            f"{'Learning rate:':<30}| {self.agent.learning_rate}\n"
             f"{'Discount factor (gamma):':<30}| {self.agent.gamma}\n"
-            f"{'Beta:':<30}| {self.agent.beta}\n"
+            f"{'Priority alpha:':<30}| {self.agent.priority_alpha}\n"
+            f"{'Beta start:':<30}| {self.agent.beta_start}\n"
+            f"{'Beta end:':<30}| {self.agent.beta_end}\n"
+            f"{'Current beta:':<30}| {self.agent.beta}\n"
             f"{'Epsilon:':<30}| {self.agent.e}\n"
             f"{'Minimum epsilon:':<30}| {self.agent.e_min}\n"
             f"{'Epsilon decay:':<30}| {self.agent.e_decay}\n"
@@ -61,6 +65,9 @@ class EnvironmentTracker:
             f"{'Replay buffer capacity:':<30}| {self.agent.max_buffer}\n"
             f"{'Replay batch size:':<30}| {self.agent.batch_size}\n"
             f"{'Target sync frequency:':<30}| {self.agent.target_sync_freq}\n"
+            f"{'Collision priority weight:':<30}| {self.agent.collision_weight}\n"
+            f"{'Goal priority weight:':<30}| {self.agent.goal_weight}\n"
+            f"{'Distance priority weight:':<30}| {self.agent.distance_weight}\n"
             f"{'Main network parameters:':<30}| {parameter_count}\n"
             f"{'Main network:':<30}|\n{self.agent.main_net}\n"
             + "="*40
@@ -109,17 +116,24 @@ class EnvironmentTracker:
         max_steps = (self.env.grid_rows * self.env.grid_cols) * 2
 
         was_training = self.agent.main_net.training
+        original_agent_pos = self.env.agent_pos
         self.agent.main_net.eval()
         try:
             with torch.no_grad():
                 while not is_terminal and steps < max_steps:
-                    state_tensor = torch.as_tensor(curr_state, dtype=torch.float32).unsqueeze(0)
+                    self.env.agent_pos = curr_state
+                    state_tensor = torch.as_tensor(
+                        self.env.get_state(), dtype=torch.float32
+                    ).unsqueeze(0)
                     best_action = self.agent.main_net(state_tensor).argmax(dim=1).item()
-                    next_state, _, is_terminal = self.env.take_step(curr_state, best_action)
+                    next_state, _, is_terminal, _ = self.env.take_step(
+                        curr_state, best_action
+                    )
                     path.append(next_state)
                     curr_state = next_state
                     steps += 1
         finally:
+            self.env.agent_pos = original_agent_pos
             self.agent.main_net.train(was_training)
 
         path_lines = ["", "="*40, "OPTIMAL PATH", "="*40]
