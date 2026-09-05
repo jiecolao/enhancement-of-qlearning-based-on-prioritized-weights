@@ -33,9 +33,6 @@ class EnvironmentTracker:
         self.steps_history = []
         self.optimality_history = []
 
-        self.episode_steps = 0
-        self.episode_reward = 0
-
         self.interval_steps = 0
         self.interval_reward = 0
 
@@ -151,27 +148,22 @@ class EnvironmentTracker:
         return None
     
     def record_episode(self, success):
-        self.steps_history.append(self.episode_steps)
-        self.reward_history.append(self.episode_reward)
+        self.steps_history.append(self.steps_per_ep)
+        self.reward_history.append(self.rewards_per_ep)
         self.success_history.append(int(success))
 
         if success:
             self.successes_per_ep += 1
-            self.path_lengths.append(self.episode_steps)
+            self.path_lengths.append(self.steps_per_ep)
 
-            if self.shortest_path_steps is not None:
+            if self.shortest_path_steps is not None and self.steps_per_ep > 0:
                 optimality = (
-                    self.shortest_path_steps / self.episode_steps
-                    if self.episode_steps > 0
-                    else 0.0
+                    self.shortest_path_steps / self.steps_per_ep
                 )
                 self.optimality_history.append(optimality)
 
-        self.interval_steps += self.episode_steps
-        self.interval_reward += self.episode_reward
-
-        self.episode_steps = 0
-        self.episode_reward = 0
+        self.interval_steps += self.steps_per_ep
+        self.interval_reward += self.rewards_per_ep
 
     def get_success_rate(self):
         if not self.success_history:
