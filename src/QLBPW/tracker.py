@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from datetime import datetime
 from .agent import Agent
 import numpy as np
+from collections import deque
 import tracemalloc
 import os
 import glob
@@ -25,6 +26,23 @@ class EnvironmentTracker:
         self.goal_count = 0
         self.steps_per_ep = 0
         self.rewards_per_ep = 0
+        self.successes_per_ep = 0
+        self.collisions_per_ep = 0
+        self.path_lengths = []
+        self.success_history = []
+        self.reward_history = []
+        self.steps_history = []
+        self.optimality_history = []
+
+        self.interval_steps = 0
+        self.interval_reward = 0
+
+        self.shortest_path = self.calculate_shortest_path()
+        self.shortest_path_steps = (
+            len(self.shortest_path) - 1
+            if self.shortest_path is not None
+            else None
+        )
 
         self.path_per_ep = []
         
@@ -76,6 +94,76 @@ class EnvironmentTracker:
         with open(self.full_log_path, "a", encoding="utf-8") as log_file:
             log_file.write(text + "\n")
 
+    def calculate_shortest_path(self):
+        start = self.env.start_state
+        goal = self.env.end_state
+        obstacles = set(self.env.obstacles)
+
+        queue = deque([(start, [start])])
+        visited = {start}
+
+        while queue:
+            current, path = queue.popleft()
+
+            if current == goal:
+                return path
+
+            x, y = current
+            neighbors = (
+                (x, y - 1),
+                (x + 1, y),
+                (x, y + 1),
+                (x - 1, y),
+            )
+
+            for next_state in neighbors:
+                nx, ny = next_state
+
+                if not (0 <= nx < self.env.grid_cols and 0 <= ny < self.env.grid_rows):
+                    continue
+                if next_state in obstacles or next_state in visited:
+                    continue
+
+                visited.add(next_state)
+                queue.append((next_state, path + [next_state]))
+
+        return None
+
+    def record_episode(self, success):
+        self.steps_history.append(self.steps_per_ep)
+        self.reward_history.append(self.rewards_per_ep)
+        self.success_history.append(int(success))
+
+        if success:
+            self.successes_per_ep += 1
+            self.path_lengths.append(self.steps_per_ep)
+
+            if self.shortest_path_steps is not None and self.steps_per_ep > 0:
+                self.optimality_history.append(
+                    self.shortest_path_steps / self.steps_per_ep
+                )
+
+        self.interval_steps += self.steps_per_ep
+        self.interval_reward += self.rewards_per_ep
+
+    def get_success_rate(self):
+        if not self.success_history:
+            return 0.0
+
+        return sum(self.success_history) / len(self.success_history)
+
+    def get_average_path_length(self):
+        if not self.path_lengths:
+            return 0.0
+
+        return sum(self.path_lengths) / len(self.path_lengths)
+
+    def get_average_optimality(self):
+        if not self.optimality_history:
+            return 0.0
+
+        return sum(self.optimality_history) / len(self.optimality_history)
+
     def print_live_grid(self, agent_pos):
             grid_lines = ["", "="*40, "ENVIRONMENT", "="*40]
             for y in range(self.env.grid_rows):
@@ -96,25 +184,38 @@ class EnvironmentTracker:
             grid_lines.append("="*40)
             self._print_and_log("\n".join(grid_lines))
 
-    def print_optimal_path(self):
+    def print_learned_path(self):
         curr_state = self.env.start_state
         path = [curr_state]
         is_terminal = False
         steps = 0
-        max_steps = (self.env.grid_rows * self.env.grid_cols) * 2
+        max_steps = self.env.max_steps
+        original_agent_pos = self.env.agent_pos
+        original_env_steps = self.env.steps
 
-        while not is_terminal and steps < max_steps:
-            if curr_state not in self.agent.Q:
-                break
-            best_action = np.argmax(self.agent.Q[curr_state])
-            next_state, _, is_terminal = self.env.take_step(curr_state, best_action)
-            path.append(next_state)
-            curr_state = next_state
-            steps += 1
+        try:
+            while not is_terminal and steps < max_steps:
+                self.env.agent_pos = curr_state
+                q_values = self.agent.Q.get(
+                    curr_state,
+                    np.zeros(self.agent.no_of_actions)
+                )
+                best_action = np.argmax(q_values)
+                next_state, _, is_terminal = self.env.take_step(
+                    curr_state,
+                    best_action
+                )
+                path.append(next_state)
+                curr_state = next_state
+                steps += 1
+        finally:
+            self.env.agent_pos = original_agent_pos
+            self.env.steps = original_env_steps
 
-        path_lines = ["", "="*40, "OPTIMAL PATH", "="*40]
-        if curr_state != self.env.end_state:
-            path_lines.append("<!> Warning: Agent got stuck and didn't reach the goal.")
+        reached_goal = curr_state == self.env.end_state
+        path_lines = ["", "=" * 40, "LEARNED GREEDY PATH", "=" * 40]
+        if not reached_goal:
+            path_lines.append("<!> Warning: Agent did not reach the goal.")
 
         for y in range(self.env.grid_rows):
             row_str = ""
@@ -133,8 +234,23 @@ class EnvironmentTracker:
                     row_str += " . "
             path_lines.append(row_str)
 
-        path_lines.extend(("", f"Steps taken: {len(path) - 1}", "="*40))
+        if reached_goal and self.shortest_path_steps is not None and steps > 0:
+            optimality_text = f"{self.shortest_path_steps / steps * 100:.2f}%"
+        else:
+            optimality_text = "N/A"
+
+        path_lines.extend((
+            "",
+            f"Steps taken: {steps}",
+            f"Reached goal: {'Yes' if reached_goal else 'No'}",
+            f"Shortest valid path: {self.shortest_path_steps}",
+            f"Optimality: {optimality_text}",
+            "=" * 40
+        ))
         self._print_and_log("\n".join(path_lines))
+
+    def print_optimal_path(self):
+        self.print_learned_path()
 
     def print_episode_summary(
             self, 
@@ -146,6 +262,9 @@ class EnvironmentTracker:
             epsilon
         ):
         current, peak = tracemalloc.get_traced_memory()
+        success_rate = self.get_success_rate()
+        average_path = self.get_average_path_length()
+        average_optimality = self.get_average_optimality()
 
         summary_text = (
             f"===== EPISODE {curr_ep}/{max_ep} SUMMARY =====\n"
@@ -157,9 +276,14 @@ class EnvironmentTracker:
             f"{'Total Steps:':<30}| {self.steps}\n"
             f"{'Total Obstacles Encountered:':<30}| {self.obstacle_encountered}\n"
             f"{'Total Goals:':<30}| {self.goal_count}\n"
-            f"{'Total Rewards:':<30}| {self.rewards}\n"
-            f"{' ├── Positive Rewards:':<30}| {self.pos_rewards}\n"
-            f"{' └── Negative Rewards:':<30}| {self.neg_rewards}\n"
+            f"{'Total Rewards:':<30}| {self.rewards:.2f}\n"
+            f"{' ├── Positive Rewards:':<30}| {self.pos_rewards:.2f}\n"
+            f"{' └── Negative Rewards:':<30}| {self.neg_rewards:.2f}\n"
+            f"{'Shortest valid path:':<30}| "
+            f"{self.shortest_path_steps if self.shortest_path_steps is not None else 'No path'}\n"
+            f"{'Success rate:':<30}| {success_rate * 100:.2f}%\n"
+            f"{'Average path length:':<30}| {average_path:.2f}\n"
+            f"{'Average optimality:':<30}| {average_optimality * 100:.2f}%\n"
         )
 
         self._print_and_log(summary_text)
