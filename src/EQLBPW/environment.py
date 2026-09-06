@@ -96,7 +96,6 @@ class Environment:
 
         attempted_state = (x, y)
 
-        # Check whether the attempted movement hits an obstacle
         collision = attempted_state in self.obstacles
 
         if collision:
@@ -104,16 +103,16 @@ class Environment:
         else:
             next_state = attempted_state
 
-        # Check whether the agent reached the goal
+        # check whether the agent reached the goal
         goal_reached = next_state == self.end_state
 
-        # Calculate distance before and after movement
+        # calculate distance before and after movement
         old_distance = self.distance_to_goal(state)
         new_distance = self.distance_to_goal(next_state)
 
         distance_progress = old_distance - new_distance
 
-        # Reward
+        # reward
         if collision:
             reward = -10.0
 
@@ -123,7 +122,7 @@ class Environment:
         else:
             reward = -0.1
 
-        # Episode terminates when the goal is reached
+        # terminate ep when goal is reached
         is_terminal = goal_reached
 
         # Update environment state
