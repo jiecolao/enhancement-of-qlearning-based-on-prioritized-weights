@@ -1,11 +1,12 @@
 from .environment import Environment
 from .agent import Agent
-from env_settings import OBSTACLES
+from env_settings import PRESET_ENVIRONMENTS
 from visualizer import Visualizer
 import time
 import tracemalloc
 
 def simulate():
+
     state_dim = 29
     learning_rate = 0.0005
     gamma = 0.95
@@ -43,24 +44,21 @@ def simulate():
         distance_weight=distance_weight,
     )
 
-    grid = 20
-    start = (4, 0)
-    end = (9, 19)
+    environment = PRESET_ENVIRONMENTS[1]
     episodes = 2000
     ep_tracker = 10
-    no_of_obstacles = 0
-    static_obstacles = OBSTACLES[1]["obstacles"]
-    is_dynamic_obs = False
+    no_of_obstacles = 5
+    is_dynamic_obs = True
 
     env = Environment(
-        grid=grid,
-        start_state=start,
-        end_state=end,
+        grid=environment["grid_size"],
+        start_state=environment["start_state"],
+        end_state=environment["end_state"],
         agent=agent,
         episodes=episodes,
         ep_tracker=ep_tracker,
         no_of_obstacles=no_of_obstacles,
-        static_obstacles=static_obstacles,
+        static_obstacles=environment["obstacles"],
         is_dynamic_obs=is_dynamic_obs,
     )
 
@@ -126,12 +124,9 @@ def simulate():
             agent.sync_target()
 
         # Tracker
-
         if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - episode_start_time
-
             env.tracker.record_episode(success = is_terminal and env.agent_pos == env.end_state)
-
             env.tracker.print_episode_summary(
                 curr_ep=episode_number,
                 max_ep=env.episodes,
@@ -144,7 +139,8 @@ def simulate():
             env.tracker.record_episode(success=is_terminal and env.agent_pos == env.end_state)
 
         if episode_number % 100 == 0:
-            env.tracker.print_learned_path()
+            env.tracker.print_learned_path()    # Tracker
+            env.generate_obstacles()            # Dynamic Obstacle
 
     return agent, env
 

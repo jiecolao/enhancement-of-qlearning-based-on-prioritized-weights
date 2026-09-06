@@ -1,12 +1,13 @@
 from .environment import Environment
 from .agent import Agent
-from env_settings import OBSTACLES
+from env_settings import PRESET_ENVIRONMENTS
 from visualizer import Visualizer
 import tracemalloc
 import numpy as np
 import time
 
 def simulate():
+
     agent = Agent(
         alpha=0.1, 
         gamma=0.9, 
@@ -19,16 +20,18 @@ def simulate():
         max_buffer=20,
         batch_size=2000, 
     )
+    
+    environment = PRESET_ENVIRONMENTS[1]
 
     env = Environment(
-        grid=20,
-        start_state=(4, 0),
-        end_state=(16, 7),
+        grid=environment["grid_size"],
+        start_state=environment["start_state"]["fort_santiago"],
+        end_state=environment["end_state"]["enter_exit4"],
         agent=agent,
         episodes=2000,
         ep_tracker=10,
         no_of_obstacles=3,
-        static_obstacles= OBSTACLES[1]["obstacles"],
+        static_obstacles=environment["obstacles"],
         is_dynamic_obs=True
     )
 
@@ -112,8 +115,8 @@ def simulate():
                 epsilon=agent.e
             )
 
-        if episode_number % 100 == 0:
-            env.tracker.print_learned_path()    # Tracker
+        if episode_number % 10 == 0:
+            # env.tracker.print_learned_path()    # Tracker
             env.generate_obstacles()            # Dynamic Obstacle
 
     return agent, env
