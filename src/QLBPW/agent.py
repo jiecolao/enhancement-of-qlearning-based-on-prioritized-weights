@@ -34,10 +34,7 @@ class Agent:
             alpha, 
             gamma, 
             beta,
-            e, 
-            e_min, 
-            e_decay,        
-            no_of_states, 
+            e,
             no_of_actions,
             max_buffer,
             batch_size, 
@@ -48,8 +45,6 @@ class Agent:
         self.beta = beta                # ???
 
         self.e = e                      # Epsilon
-        self.e_min = e_min              # Epsilon Minimum
-        self.e_decay = e_decay          # Epsilon Decaying Rate
 
         self.no_of_actions = no_of_actions
         self.Q = {}

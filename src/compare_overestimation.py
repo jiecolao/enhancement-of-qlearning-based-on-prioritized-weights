@@ -37,8 +37,7 @@ EQLBPW_SETTINGS = dict(
     collision_weight=1.0, goal_weight=2.0, distance_weight=0.5,
 )
 QLBPW_SETTINGS = dict(
-    alpha=0.1, gamma=GAMMA, beta=0.3, e=0.9, e_min=0.1,
-    e_decay=0.998, no_of_states=81, no_of_actions=4,
+    alpha=0.1, gamma=GAMMA, beta=0.3, e=0.9, no_of_actions=4,
     max_buffer=20, batch_size=2000,
 )
 
