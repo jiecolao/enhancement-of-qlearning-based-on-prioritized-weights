@@ -37,14 +37,18 @@ class EnvironmentTracker:
         self.interval_steps = 0
         self.interval_reward = 0
 
+        self.shortest_recorded_steps = 0
+        self.path_per_ep = []
+
+        self.qtable_states = []
+        self.qtable_memory = []
+
         self.shortest_path = self.calculate_shortest_path()
         self.shortest_path_steps = (
             len(self.shortest_path) - 1
             if self.shortest_path is not None
             else None
         )
-
-        self.path_per_ep = []
         
         self.log_folder = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
@@ -164,6 +168,18 @@ class EnvironmentTracker:
 
         return sum(self.optimality_history) / len(self.optimality_history)
 
+    def record_qtable_metrics(self):
+        states = len(self.agent.Q)
+
+        qtable_value_bytes = sum(
+            values.nbytes for values in self.agent.Q.values()
+        )
+
+        self.qtable_states.append(states)
+        self.qtable_memory.append(
+            qtable_value_bytes / (1024 * 1024)
+        )
+
     def print_live_grid(self, agent_pos):
             grid_lines = ["", "="*40, "ENVIRONMENT", "="*40]
             for y in range(self.env.grid_rows):
@@ -273,6 +289,9 @@ class EnvironmentTracker:
             f"{f'Rewards per {ep_tracker} episode:':<30}| {self.rewards_per_ep}\n"
             f"{f'{ep_tracker} Episode Completion Time:':<30}| {elapsed:.2f} seconds\n"
             f"{'Memory usage:':<30}| Current: {current / (1024 * 1024):.2f} MB, Peak: {peak / (1024 * 1024):.2f} MB\n"
+            f"{'Q-table states:':<30}| {len(self.agent.Q)}\n"
+            f"{'Q-table value memory:':<30}| "
+            f"{sum(v.nbytes for v in self.agent.Q.values()) / (1024 * 1024):.4f} MB\n"
             f"{'Total Steps:':<30}| {self.steps}\n"
             f"{'Total Obstacles Encountered:':<30}| {self.obstacle_encountered}\n"
             f"{'Total Goals:':<30}| {self.goal_count}\n"

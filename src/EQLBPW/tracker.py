@@ -36,6 +36,17 @@ class EnvironmentTracker:
         self.interval_steps = 0
         self.interval_reward = 0
 
+        self.network_parameters = sum(
+            parameter.numel()
+            for parameter in self.agent.main_net.parameters()
+        )
+
+        self.network_memory = sum(
+            parameter.numel() * parameter.element_size()
+            for network in [self.agent.main_net, self.agent.target_net]
+            for parameter in network.parameters()
+        ) / (1024 * 1024)
+
         self.shortest_path = self.calculate_shortest_path()
 
         if self.shortest_path is not None:
@@ -183,6 +194,25 @@ class EnvironmentTracker:
 
         return sum(self.optimality_history) / len(self.optimality_history)
 
+    def get_network_memory(self):
+        parameter_memory = sum(
+            parameter.numel() * parameter.element_size()
+            for network in [self.agent.main_net, self.agent.target_net]
+            for parameter in network.parameters()
+        )
+
+        optimizer_memory = sum(
+            value.numel() * value.element_size()
+            for state in self.agent.optimizer.state.values()
+            for value in state.values()
+            if torch.is_tensor(value)
+        )
+
+        return (
+            parameter_memory / (1024 * 1024),
+            optimizer_memory / (1024 * 1024)
+        )
+
     def print_live_grid(self, agent_pos):
             grid_lines = ["", "="*40, "ENVIRONMENT", "="*40]
             for y in range(self.env.grid_rows):
@@ -309,6 +339,7 @@ class EnvironmentTracker:
             epsilon
         ):
         current, peak = tracemalloc.get_traced_memory()
+        # network_memory, optimizer_memory = self.get_network_memory()
         success_rate = self.get_success_rate()
         average_path = self.get_average_path_length()
         average_optimality = self.get_average_optimality()
@@ -319,7 +350,9 @@ class EnvironmentTracker:
             f"{f'Steps per {ep_tracker} episode:':<30}| {self.steps_per_ep} / {max_steps*max_ep}\n"
             f"{f'Rewards per {ep_tracker} episode:':<30}| {self.rewards_per_ep}\n"
             f"{f'{ep_tracker} Episode Completion Time:':<30}| {elapsed:.2f} seconds\n"
-            f"{'Memory usage:':<30}| Current: {current / (1024 * 1024):.2f} MB, Peak: {peak / (1024 * 1024):.2f} MB\n"
+            f"{'Python Traced Memory:':<30}| Current: {current / (1024 * 1024):.2f} MB, Peak: {peak / (1024 * 1024):.2f} MB\n"
+            # f"{'Network Memory:':<30}| {network_memory}\n"
+            # f"{'Optimizer Memory:':<30}| {optimizer_memory}"
             f"{'Total Steps:':<30}| {self.steps}\n"
             f"{'Total Obstacles Encountered:':<30}| {self.obstacle_encountered}\n"
             f"{'Total Goals:':<30}| {self.goal_count}\n"
