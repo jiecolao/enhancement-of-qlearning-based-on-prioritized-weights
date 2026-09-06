@@ -1,3 +1,97 @@
+PRESET_ENVIRONMENTS = [
+    {   # 0
+        'name': 'QLBPW (9x9)',
+        'grid_size': 9,
+        'start_state': (0, 0),
+        'end_state': (8, 8),
+        'obstacles': set(),
+    },
+    {   # 1
+        'name': 'Intramuros (20x20)',
+        'grid_size': 20,
+        'start_state': {
+            "fort_santiago": (5, 0),
+            "manila_cathedral": (7, 3),
+            "enter_exit1": (19, 5),
+            "dlm": (16, 7),
+            "enter_exit2": (2, 9),
+            "san_agustin_church": (7, 9),
+            "enter_exit3": (15, 15),
+            "bdsd": (2, 17),
+            "enter_exit4": (6, 19),
+        },
+        'end_state': {
+            "fort_santiago": (5, 0),
+            "manila_cathedral": (7, 3),
+            "enter_exit1": (19, 5),
+            "dlm": (16, 7),
+            "enter_exit2": (2, 9),
+            "san_agustin_church": (7, 9),
+            "enter_exit3": (15, 15),
+            "bdsd": (2, 17),
+            "enter_exit4": (6, 19),
+        },
+        'obstacles': set(),
+    },
+    {   # 2
+        'name': 'Optimality Test',
+        'name': 'Intramuros (20x20)',
+        'grid_size': 20,
+        'start_state': (0, 0),
+        'end_state': (6, 6),
+        'obstacles': set(),
+    },
+    {   # 4
+        'name': 'Obstacle-Free (10x10)',
+        'grid_size': 10,
+        'start_state': (0, 0),
+        'end_state': (9, 9),
+        'obstacles': set(),
+    },   
+    {   # 5
+        'name': 'Obstacle-Free (20x20)',
+        'grid_size': 20,
+        'start_state': (0, 0),
+        'end_state': (19, 19),
+        'obstacles': set(),
+    },   
+    {   # 6
+        'name': 'Obstacle-Free (30x30)',
+        'grid_size': 30,
+        'start_state': (0, 0),
+        'end_state': (29, 29),
+        'obstacles': set(),
+    },   
+    {   # 7
+        'name': 'Obstacle-Free (40x40)',
+        'grid_size': 40,
+        'start_state': (0, 0),
+        'end_state': (39, 39),
+        'obstacles': set(),
+    },   
+    {   # 8
+        'name': 'Obstacle-Free (50x50)',
+        'grid_size': 50,
+        'start_state': (0, 0),
+        'end_state': (49, 49),
+        'obstacles': set(),
+    },   
+    {   # 9
+        'name': 'Obstacle-Free (75x75)',
+        'grid_size': 75,
+        'start_state': (0, 0),
+        'end_state': (74, 74),
+        'obstacles': set(),
+    },   
+    {   # 10
+        'name': 'Obstacle-Free (100x100)',
+        'grid_size': 100,
+        'start_state': (0, 0),
+        'end_state': (99, 99),
+        'obstacles': set(),
+    },   
+]
+
 OBSTACLES = [
     {
         'name': 'QLBPW',
@@ -132,54 +226,21 @@ OBSTACLES = [
         },
     },
     {
-        'name': 'test',
+        'name': 'optimal-test',
         'obstacles': {
-            
+                    (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0), (7, 0), (8, 0),
+                            (2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (8, 1),
+            (0, 2),         (2, 2), (3, 2), (4, 2), (5, 2), (6, 2), (7, 2), (8, 2),
+            (0, 3),         (2, 3), (3, 3), (4, 3), (5, 3), (6, 3), (7, 3), (8, 3),
+            (0, 4),                 (3, 4), 
+            (0, 5), (1, 5),                         (5, 5), (6, 5), (7, 5), 
+            (0, 6), (1, 6), (2, 6), (3, 6),         (5, 6),         (7, 6), 
+            (0, 7), (1, 7), (2, 7), (3, 7), (4, 7), (5, 7),         (7, 7), 
+            (0, 8), (1, 8), (2, 8), (3, 8), (4, 8), (5, 8),          
         }
     }
 ]
 
-ENVIRONMNENT = [
-    {
-        'name': '9x9',
-        'grid': 15,
-        'start': (0, 0),
-        'goal': (14, 14),
-        'base_obstacles': {}, # NOTE: When running static, use environment from the study
-    },
-    {
-        'name': 'Intramuros (20x20)',
-        'grid': 20,
-        'start': (0, 0),
-        'goal': (0, 0),
-        'base_obstacles': OBSTACLES[1]
-
-    },
-]
-
-
-# Normalized presets used by the Streamlit dashboard.  OBSTACLES remains
-# available for the existing simulators and comparison scripts.
-PRESET_ENVIRONMENTS = [
-    {
-        'name': 'QLBPW (9x9)',
-        'grid_size': 9,
-        'start_state': (0, 0),
-        'end_state': (8, 8),
-        'obstacles': OBSTACLES[0]['obstacles'],
-    },
-    {
-        'name': 'Intramuros (20x20)',
-        'grid_size': 20,
-        'start_state': (4, 0),
-        'end_state': (16, 7),
-        'obstacles': OBSTACLES[1]['obstacles'],
-    },
-    {
-        'name': 'Empty test (10x10)',
-        'grid_size': 10,
-        'start_state': (0, 0),
-        'end_state': (9, 9),
-        'obstacles': OBSTACLES[2]['obstacles'],
-    },
-]
+PRESET_ENVIRONMENTS[0]['obstacles'] = OBSTACLES[0]['obstacles']
+PRESET_ENVIRONMENTS[1]['obstacles'] = OBSTACLES[1]['obstacles']
+PRESET_ENVIRONMENTS[2]['obstacles'] = OBSTACLES[2]['obstacles']
