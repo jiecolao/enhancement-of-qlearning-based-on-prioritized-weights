@@ -48,6 +48,11 @@ class Environment:
         self.agent_pos = self.start_state
         self.steps = 0
 
+        # Reset episode-local tracker counters. Cumulative counters remain
+        # untouched so run-level summaries still accumulate normally.
+        self.tracker.steps_per_ep = 0
+        self.tracker.rewards_per_ep = 0
+
         return self.get_state()
 
     def generate_obstacles(self):
@@ -76,26 +81,16 @@ class Environment:
     def take_step(self, state, action):
         x, y = state
 
-        # Actions:
-        # 0 = up
-        # 1 = right
-        # 2 = down
-        # 3 = left
-
         if action == 0:
             y = max(0, y - 1)
-
         elif action == 1:
             x = min(self.grid_cols - 1, x + 1)
-
         elif action == 2:
             y = min(self.grid_rows - 1, y + 1)
-
         elif action == 3:
             x = max(0, x - 1)
 
         attempted_state = (x, y)
-
         collision = attempted_state in self.obstacles
 
         if collision:
@@ -103,29 +98,21 @@ class Environment:
         else:
             next_state = attempted_state
 
-        # check whether the agent reached the goal
         goal_reached = next_state == self.end_state
 
-        # calculate distance before and after movement
         old_distance = self.distance_to_goal(state)
         new_distance = self.distance_to_goal(next_state)
-
         distance_progress = old_distance - new_distance
 
-        # reward
         if collision:
             reward = -10.0
-
         elif goal_reached:
             reward = 10.0
-
         else:
             reward = -0.1
 
-        # terminate ep when goal is reached
         is_terminal = goal_reached
 
-        # Update environment state
         self.agent_pos = next_state
         self.steps += 1
 
@@ -148,14 +135,11 @@ class Environment:
             goal_y / (self.grid_cols - 1),
         ]
 
-        # Add 5x5 local obstacle information
         for dx in range(-2, 3):
             for dy in range(-2, 3):
-
                 x = agent_x + dx
                 y = agent_y + dy
 
-                # Treat outside the grid as obstacles
                 if (
                     x < 0
                     or x >= self.grid_rows
@@ -163,10 +147,8 @@ class Environment:
                     or y >= self.grid_cols
                 ):
                     state.append(1.0)
-
                 elif (x, y) in self.obstacles:
                     state.append(1.0)
-
                 else:
                     state.append(0.0)
 
