@@ -5,7 +5,91 @@ ENHANCEMENTS:
 2. Decaying Epsilon
 3. Double Deep Q-learning
 
+4. EQLBPW collision/goal/distance weighting
+5. Prioritized Experience Replay
+6. Improved Importance Sampling
+7. Changed reward shaping
+8. Manhattan Distance
+
 DDQN+Prioritized Replay+Path-Aware Priority+Importance Sampling
+
+                Enhanced Q-Learning
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+      Double DQN              Prioritized Replay
+          │                         │
+          │                    ┌────┴─────┐
+          │                    │          │
+          │                 TD Error   EQLBPW
+          │                              │
+          │                    ┌─────────┼─────────┐
+          │                    │         │         │
+          │                Collision   Goal   Distance
+          │
+          └──────────────┬─────────────────────────
+                         │
+                  ε-Greedy Exploration
+                         │
+                         ▼
+                  Learned Policy
+                         │
+                         ▼
+             Path/Success/Optimality
+                    Evaluation
+
+
+                 ENVIRONMENT
+                     │
+                     ▼
+              State Representation
+                     │
+                     ▼
+              EQLBPW DQN Agent
+                     │
+              ┌──────┴──────┐
+              │             │
+          Main DQN       Target DQN
+              │             │
+              └──────┬──────┘
+                     │
+                Double DQN
+                     │
+                     ▼
+                TD Error δ
+                     │
+                     ▼
+          ┌─────────────────────┐
+          │ EQLBPW Priority     │
+          │                     │
+          │ TD Error            │
+          │ Collision           │
+          │ Goal                │
+          │ Distance Progress   │
+          └─────────┬───────────┘
+                    │
+                    ▼
+          Prioritized Replay
+                    │
+                    ▼
+       Importance-Sampling Weights
+                    │
+                    ▼
+             Weighted Huber
+                 Loss
+                    │
+                    ▼
+             Network Update
+                    │
+                    ▼
+          Periodic Target Sync
+                    │
+                    ▼
+          Decaying ε-Greedy
+                    │
+                    ▼
+            Next Environment
+                Interaction
 
 IMPROVED ALGORITHM
 I. Initialization
