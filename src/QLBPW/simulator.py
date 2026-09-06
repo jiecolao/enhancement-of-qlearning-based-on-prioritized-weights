@@ -25,9 +25,9 @@ def simulate():
         start_state=(4, 0),
         end_state=(16, 7),
         agent=agent,
-        episodes=20,
-        ep_tracker=5,
-        no_of_obstacles=0,
+        episodes=2000,
+        ep_tracker=10,
+        no_of_obstacles=3,
         static_obstacles= OBSTACLES[1]["obstacles"],
         is_dynamic_obs=True
     )
@@ -38,16 +38,17 @@ def simulate():
     for ep in range(env.episodes):
         episode_number = ep + 1
         env.agent_pos = env.start_state
+        env.steps = 0
+        env.tracker.steps_per_ep = 0
+        env.tracker.rewards_per_ep = 0
         is_terminal = False
 
         if episode_number % env.ep_tracker == 0:
             episode_start_time = time.time()
 
-        while not is_terminal and env.tracker.steps_per_ep <= env.max_steps:
+        while not is_terminal and env.tracker.steps_per_ep < env.max_steps:
             action = agent.epsilon_greedy(env.agent_pos)
             next_state, reward, is_terminal = env.take_step(env.agent_pos, action)
-
-            agent.memory.push(env.agent_pos, action, reward, next_state, is_terminal)
 
             if env.agent_pos not in agent.Q:
                 agent.Q[env.agent_pos] = np.zeros(agent.no_of_actions)
@@ -63,7 +64,6 @@ def simulate():
                 td_target = reward + agent.gamma * max_q_next
 
             td_error = td_target - current_q
-            
             agent.memory.push(env.agent_pos, action, reward, next_state, td_error)
 
             if len(agent.memory) > 0:
@@ -83,19 +83,23 @@ def simulate():
                 )
 
             env.agent_pos = next_state
+            env.steps += 1
 
             # Trackers
             env.tracker.steps_per_ep += 1
             env.tracker.steps += 1
+            env.tracker.rewards += reward
+            env.tracker.rewards_per_ep += reward
             if reward < 0:
-                env.tracker.rewards -= reward
                 env.tracker.obstacle_encountered += 1
                 env.tracker.neg_rewards += reward
             elif reward > 0:
-                env.tracker.rewards += reward
-                env.tracker.rewards_per_ep += reward
                 env.tracker.pos_rewards += reward
                 env.tracker.goal_count += 1
+
+        env.tracker.record_episode(
+            success=env.agent_pos == env.end_state
+        )
 
         if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - episode_start_time
@@ -107,6 +111,10 @@ def simulate():
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
+
+        if episode_number % 100 == 0:
+            env.tracker.print_learned_path()    # Tracker
+            env.generate_obstacles()            # Dynamic Obstacle
 
     return agent, env
 
@@ -120,7 +128,7 @@ if __name__ == "__main__":
 
     trained_agent, trained_env = simulate()
 
-    trained_env.tracker.print_optimal_path()
+    trained_env.tracker.print_learned_path()
     trained_env.tracker.print_total_summary(start_time=start_time)
     # trained_agent.save(agent_name="test", save_memory=True)
 
