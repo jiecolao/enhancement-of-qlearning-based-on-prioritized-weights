@@ -1,0 +1,168 @@
+{
+  "seeds": [
+    0,
+    1
+  ],
+  "diagnostic_steps": 100,
+  "grid_steps": 200,
+  "workers": 2,
+  "gamma": 0.95,
+  "QLBPW": {
+    "alpha": 0.1,
+    "gamma": 0.95,
+    "beta": 0.3,
+    "e": 0.9,
+    "e_min": 0.1,
+    "e_decay": 0.998,
+    "no_of_states": 81,
+    "no_of_actions": 4,
+    "max_buffer": 20,
+    "batch_size": 2000
+  },
+  "EQLBPW": {
+    "state_dim": 29,
+    "action_dim": 4,
+    "learning_rate": 0.0005,
+    "gamma": 0.95,
+    "priority_alpha": 0.6,
+    "beta_start": 0.4,
+    "beta_end": 1.0,
+    "e": 1.0,
+    "e_min": 0.05,
+    "e_decay": 0.995,
+    "max_buffer": 50000,
+    "batch_size": 64,
+    "target_sync_freq": 20,
+    "collision_weight": 1.0,
+    "goal_weight": 2.0,
+    "distance_weight": 0.5
+  },
+  "versions": {
+    "python": "3.14.6",
+    "numpy": "2.5.2",
+    "torch": "2.13.0+cpu",
+    "matplotlib": "3.11.1"
+  },
+  "grid": {
+    "size": 9,
+    "start": [
+      0,
+      0
+    ],
+    "goal": [
+      8,
+      8
+    ],
+    "obstacles": [
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        4
+      ],
+      [
+        0,
+        8
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        6
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        3,
+        7
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        5,
+        3
+      ],
+      [
+        5,
+        5
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        5,
+        7
+      ],
+      [
+        6,
+        1
+      ],
+      [
+        6,
+        5
+      ],
+      [
+        7,
+        3
+      ],
+      [
+        7,
+        5
+      ],
+      [
+        7,
+        6
+      ],
+      [
+        7,
+        7
+      ],
+      [
+        8,
+        0
+      ],
+      [
+        8,
+        3
+      ]
+    ],
+    "reachable_nonterminal_states": 58,
+    "cap": 162,
+    "noise_std": 0.5,
+    "bellman_residual": 0.0
+  },
+  "diagnostic": {
+    "noise_std": 1.0,
+    "block_size": 10,
+    "true_q": 0.0,
+    "actions": 4,
+    "observation": "29 zeros"
+  },
+  "interpretation": "Two complete algorithms; no causal isolation of Double DQN. All seeds retained.",
+  "qlbpw_epsilon": "Fixed 0.9, as in current standalone simulator",
+  "eqlbpw_schedule": "Epsilon decay and target sync per episode / diagnostic block; beta per interaction",
+  "ci_method": "Percentile bootstrap across independent seeds; paired differences; final 20% checkpoints",
+  "source_sha256": {
+    "src\\compare_overestimation.py": "eafe4603ea85ba63afcf35d7edd461d3d6a565adc20a01d80c3bf308934490f1",
+    "src\\EQLBPW\\agent.py": "3a0c9c1e1bf66e8e8ef4fae86104aca9860e2771b526071a98b4c54ec1c0443a",
+    "src\\QLBPW\\agent.py": "336b1db184d1baa38719d636441caead69214ea6409f1ab6278b903a16579511",
+    "src\\env_settings.py": "af5d4f4c277e8dc34a635bb1892e097fe4e009b59de6231e8835af8fd40206db"
+  }
+}

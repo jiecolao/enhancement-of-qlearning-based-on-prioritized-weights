@@ -6,6 +6,7 @@
 *.jpeg
 *.png
 tests/*
+!tests/test_compare_overestimation.py
 
 src/**/training_logs
 src/**/trained_agents

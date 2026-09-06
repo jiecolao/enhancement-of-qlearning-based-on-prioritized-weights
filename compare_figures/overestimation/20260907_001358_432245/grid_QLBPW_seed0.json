@@ -1,0 +1,1329 @@
+{
+  "task": "grid",
+  "algorithm": "QLBPW",
+  "seed": 0,
+  "rows": [
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 0,
+      "mean_max_q": 0.0,
+      "signed_bias": -0.3452868895251701,
+      "positive_bias": 0.0934924278851361,
+      "mean_absolute_q_error": 0.569543625018682,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 1620,
+      "mean_max_q": 0.2669586522582204,
+      "signed_bias": -0.26107105144983034,
+      "positive_bias": 0.12249521132299994,
+      "mean_absolute_q_error": 0.5224448226815873,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 3240,
+      "mean_max_q": 0.3919292330967507,
+      "signed_bias": -0.20657810146496217,
+      "positive_bias": 0.1612809647941729,
+      "mean_absolute_q_error": 0.542476264511002,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 4860,
+      "mean_max_q": 0.5138826846215016,
+      "signed_bias": -0.08409763369945682,
+      "positive_bias": 0.25208731984165683,
+      "mean_absolute_q_error": 0.5882326331425349,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 6480,
+      "mean_max_q": 0.6269414754953023,
+      "signed_bias": 0.025988600473904378,
+      "positive_bias": 0.33462797391704047,
+      "mean_absolute_q_error": 0.6432753758930269,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 8100,
+      "mean_max_q": 0.7699194120212214,
+      "signed_bias": 0.17089844969952409,
+      "positive_bias": 0.43427763348746995,
+      "mean_absolute_q_error": 0.6927847458986831,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 9720,
+      "mean_max_q": 0.963853153862243,
+      "signed_bias": 0.34535547573695785,
+      "positive_bias": 0.5439111033290099,
+      "mean_absolute_q_error": 0.7336755336496475,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 11340,
+      "mean_max_q": 1.1236814737945746,
+      "signed_bias": 0.5079453840193152,
+      "positive_bias": 0.6594110460968768,
+      "mean_absolute_q_error": 0.7801443964721518,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 12960,
+      "mean_max_q": 1.313353748354473,
+      "signed_bias": 0.6812534174574398,
+      "positive_bias": 0.8115743152314877,
+      "mean_absolute_q_error": 0.8832723825963247,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 14580,
+      "mean_max_q": 1.4484586399266803,
+      "signed_bias": 0.7963521124699425,
+      "positive_bias": 0.9207921220770305,
+      "mean_absolute_q_error": 0.9309817916717344,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 16200,
+      "mean_max_q": 1.6189280661003622,
+      "signed_bias": 0.9664200408935836,
+      "positive_bias": 1.067058089706406,
+      "mean_absolute_q_error": 0.9877528118451006,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 17820,
+      "mean_max_q": 1.7225350062675653,
+      "signed_bias": 1.069194535785336,
+      "positive_bias": 1.1593596912263275,
+      "mean_absolute_q_error": 1.01275010262594,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 19440,
+      "mean_max_q": 1.8467480945244268,
+      "signed_bias": 1.1945506820073055,
+      "positive_bias": 1.279852980180569,
+      "mean_absolute_q_error": 1.0977789057200604,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 21060,
+      "mean_max_q": 1.931084390683078,
+      "signed_bias": 1.2803971603179087,
+      "positive_bias": 1.3598867026941768,
+      "mean_absolute_q_error": 1.1604722652254809,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 22680,
+      "mean_max_q": 2.041852915449382,
+      "signed_bias": 1.3933403674843063,
+      "positive_bias": 1.4683526140088135,
+      "mean_absolute_q_error": 1.249538748715819,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 24300,
+      "mean_max_q": 2.1097179893544826,
+      "signed_bias": 1.456362638485014,
+      "positive_bias": 1.5313748850095215,
+      "mean_absolute_q_error": 1.2971558012821074,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 25920,
+      "mean_max_q": 2.130371107739908,
+      "signed_bias": 1.4798641763009008,
+      "positive_bias": 1.5500080054930754,
+      "mean_absolute_q_error": 1.3582626912562812,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 27540,
+      "mean_max_q": 2.190776715258257,
+      "signed_bias": 1.5348000041521317,
+      "positive_bias": 1.6015913078762583,
+      "mean_absolute_q_error": 1.4172327636742263,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 29160,
+      "mean_max_q": 2.2107195351885305,
+      "signed_bias": 1.5545063990470533,
+      "positive_bias": 1.6185282588599095,
+      "mean_absolute_q_error": 1.4642956495240076,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 30780,
+      "mean_max_q": 2.2606404165326497,
+      "signed_bias": 1.607189748617794,
+      "positive_bias": 1.6608041470761346,
+      "mean_absolute_q_error": 1.5141247652465313,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 32400,
+      "mean_max_q": 2.327552400594581,
+      "signed_bias": 1.6737782559195444,
+      "positive_bias": 1.7260180585489597,
+      "mean_absolute_q_error": 1.573310628652584,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 34020,
+      "mean_max_q": 2.331827608439587,
+      "signed_bias": 1.6844308341957768,
+      "positive_bias": 1.736670636825192,
+      "mean_absolute_q_error": 1.5972677548902925,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 35640,
+      "mean_max_q": 2.430743438294276,
+      "signed_bias": 1.776311354074002,
+      "positive_bias": 1.8285511567034174,
+      "mean_absolute_q_error": 1.6733911806453632,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 37260,
+      "mean_max_q": 2.4910719811677087,
+      "signed_bias": 1.8377679201683932,
+      "positive_bias": 1.8825629509386272,
+      "mean_absolute_q_error": 1.71826340828222,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 38880,
+      "mean_max_q": 2.540472706231155,
+      "signed_bias": 1.8895224034945433,
+      "positive_bias": 1.9338039150332833,
+      "mean_absolute_q_error": 1.7595438874867073,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 40500,
+      "mean_max_q": 2.598036739118599,
+      "signed_bias": 1.9425308357950615,
+      "positive_bias": 1.986382345505449,
+      "mean_absolute_q_error": 1.8062394018202514,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 42120,
+      "mean_max_q": 2.5586025970935804,
+      "signed_bias": 1.9023112859559304,
+      "positive_bias": 1.946162795666318,
+      "mean_absolute_q_error": 1.789410535955088,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 43740,
+      "mean_max_q": 2.571255105398298,
+      "signed_bias": 1.9169253897553213,
+      "positive_bias": 1.9607768994657089,
+      "mean_absolute_q_error": 1.7981182798873445,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 45360,
+      "mean_max_q": 2.6070085137773393,
+      "signed_bias": 1.9518899819573816,
+      "positive_bias": 1.9956782267241908,
+      "mean_absolute_q_error": 1.8531235974852251,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 46980,
+      "mean_max_q": 2.600669266092895,
+      "signed_bias": 1.9513972540703397,
+      "positive_bias": 1.9951854988371494,
+      "mean_absolute_q_error": 1.8542725079357683,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 48600,
+      "mean_max_q": 2.5476228986353835,
+      "signed_bias": 1.8995770702870436,
+      "positive_bias": 1.9411088414396305,
+      "mean_absolute_q_error": 1.819787059161672,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 50220,
+      "mean_max_q": 2.572221437233017,
+      "signed_bias": 1.917019705735993,
+      "positive_bias": 1.95855147688858,
+      "mean_absolute_q_error": 1.821493045181819,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 51840,
+      "mean_max_q": 2.5450515230839454,
+      "signed_bias": 1.8876086185305605,
+      "positive_bias": 1.9269678578522516,
+      "mean_absolute_q_error": 1.8095437372117191,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 53460,
+      "mean_max_q": 2.6018572844607593,
+      "signed_bias": 1.9487363900081456,
+      "positive_bias": 1.9765529589786086,
+      "mean_absolute_q_error": 1.808399962996439,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 55080,
+      "mean_max_q": 2.608838687126143,
+      "signed_bias": 1.9519978754621763,
+      "positive_bias": 1.9798144444326393,
+      "mean_absolute_q_error": 1.835596412614955,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 56700,
+      "mean_max_q": 2.632682676224216,
+      "signed_bias": 1.9775368181921231,
+      "positive_bias": 2.0053533871625864,
+      "mean_absolute_q_error": 1.857505831989139,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 58320,
+      "mean_max_q": 2.7013227634276147,
+      "signed_bias": 2.0524081416575384,
+      "positive_bias": 2.0802247106280016,
+      "mean_absolute_q_error": 1.9016899624818893,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 59940,
+      "mean_max_q": 2.771686038985666,
+      "signed_bias": 2.1199102172392363,
+      "positive_bias": 2.145155475158774,
+      "mean_absolute_q_error": 1.9548682818152687,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 61560,
+      "mean_max_q": 2.760787038299295,
+      "signed_bias": 2.1087529689449362,
+      "positive_bias": 2.133998226864474,
+      "mean_absolute_q_error": 1.9623929147689263,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 63180,
+      "mean_max_q": 2.7715735520956533,
+      "signed_bias": 2.118429973023973,
+      "positive_bias": 2.1397183363239476,
+      "mean_absolute_q_error": 1.9712123631701397,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 64800,
+      "mean_max_q": 2.78477674298097,
+      "signed_bias": 2.1248186387425694,
+      "positive_bias": 2.143442686465831,
+      "mean_absolute_q_error": 1.9840597257424935,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 66420,
+      "mean_max_q": 2.781722192913467,
+      "signed_bias": 2.124730479163774,
+      "positive_bias": 2.1433545268870358,
+      "mean_absolute_q_error": 1.979642670539034,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 68040,
+      "mean_max_q": 2.8450696145219623,
+      "signed_bias": 2.188288764415895,
+      "positive_bias": 2.206912812139157,
+      "mean_absolute_q_error": 2.024876665752645,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 69660,
+      "mean_max_q": 2.832634236056568,
+      "signed_bias": 2.175429339585461,
+      "positive_bias": 2.1940533873087227,
+      "mean_absolute_q_error": 2.0233969391377036,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 71280,
+      "mean_max_q": 2.8146062805625807,
+      "signed_bias": 2.1586989200491944,
+      "positive_bias": 2.177322967772456,
+      "mean_absolute_q_error": 2.0128305399880726,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 72900,
+      "mean_max_q": 2.870217952549232,
+      "signed_bias": 2.213271510566349,
+      "positive_bias": 2.2318955582896107,
+      "mean_absolute_q_error": 2.0389037961613155,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 74520,
+      "mean_max_q": 2.893875699915674,
+      "signed_bias": 2.2388693658467185,
+      "positive_bias": 2.25749341356998,
+      "mean_absolute_q_error": 2.067002986665502,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 76140,
+      "mean_max_q": 2.8604552993132204,
+      "signed_bias": 2.2091516989458,
+      "positive_bias": 2.220401375154699,
+      "mean_absolute_q_error": 2.0714674564937594,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 77760,
+      "mean_max_q": 2.92694108733836,
+      "signed_bias": 2.271774015043543,
+      "positive_bias": 2.283023691252442,
+      "mean_absolute_q_error": 2.0903031398183947,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 79380,
+      "mean_max_q": 2.9228122981109603,
+      "signed_bias": 2.2738347046614296,
+      "positive_bias": 2.2825414565729623,
+      "mean_absolute_q_error": 2.098832573193797,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    },
+    {
+      "task": "grid",
+      "algorithm": "QLBPW",
+      "seed": 0,
+      "interactions": 81000,
+      "mean_max_q": 2.884365794353651,
+      "signed_bias": 2.2325937744987217,
+      "positive_bias": 2.241300526410255,
+      "mean_absolute_q_error": 2.067822584619307,
+      "goal_success": 0,
+      "path_steps": 162,
+      "collisions": 0
+    }
+  ],
+  "interactions": 81000,
+  "updates": 81000,
+  "completed_episodes": 507,
+  "elapsed_seconds": 7.00205290003214,
+  "final_path": [
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      0
+    ]
+  ],
+  "final_epsilon": 0.9
+}

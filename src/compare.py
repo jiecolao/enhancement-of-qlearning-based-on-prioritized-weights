@@ -1,11 +1,11 @@
-from EQLBPW.agent import Agent as EQLBPWAgent
-from EQLBPW.environment import Environment as EQLBPWEnvironment
-from EQLBPW.simulator import simulate as EQLBPW_simulate
-from QLBPW.agent import Agent as QLBPWAgent
-from QLBPW.environment import Environment as QLBPWEnvironment
-from QLBPW.simulator import simulate as QLBPW_simulate
-from visualizer import Visualizer
-from env_settings import OBSTACLES, PRESET_ENVIRONMENTS
+from .EQLBPW.agent import Agent as EQLBPWAgent
+from .EQLBPW.environment import Environment as EQLBPWEnvironment
+from .EQLBPW.simulator import simulate as EQLBPW_simulate
+from .QLBPW.agent import Agent as QLBPWAgent
+from .QLBPW.environment import Environment as QLBPWEnvironment
+from .QLBPW.simulator import simulate as QLBPW_simulate
+from .visualizer import Visualizer
+from .env_settings import OBSTACLES, PRESET_ENVIRONMENTS
 import numpy as np
 import torch
 import time

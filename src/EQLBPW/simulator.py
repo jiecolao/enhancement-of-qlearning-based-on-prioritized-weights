@@ -1,7 +1,7 @@
 from .environment import Environment
 from .agent import Agent
-from env_settings import PRESET_ENVIRONMENTS
-from visualizer import Visualizer
+from ..env_settings import PRESET_ENVIRONMENTS
+from ..visualizer import Visualizer
 import time
 import tracemalloc
 
@@ -53,6 +53,11 @@ def simulate(grid_size=None, episodes=100, preset=None):
     start_state = preset["start_state"]
     end_state = preset["end_state"]
     obstacles = preset["obstacles"]
+
+    if isinstance(start_state, dict):
+        start_state = start_state["fort_santiago"]
+    if isinstance(end_state, dict):
+        end_state = end_state["enter_exit4"]
     
     # episodes = 2000
     ep_tracker = 10
