@@ -6,7 +6,7 @@ import tracemalloc
 import numpy as np
 import time
 
-def simulate(grid_size=None, episodes=100, preset=None):
+def simulate():
 
     agent = Agent(
         alpha=0.1, 
@@ -17,41 +17,22 @@ def simulate(grid_size=None, episodes=100, preset=None):
         e_decay=0.998,        
         no_of_states=4, 
         no_of_actions=4,
-        max_buffer=20,
-        batch_size=2000, 
+        max_buffer=2000,
+        batch_size=20, 
     )
     
-    if preset is None:
-        preset = next(
-            environment for environment in PRESET_ENVIRONMENTS
-            if (
-                environment["grid_size"] == 20
-                and isinstance(environment["start_state"], tuple)
-                and isinstance(environment["end_state"], tuple)
-            )
-        )
-
-    grid = grid_size if grid_size is not None else preset["grid_size"]
-
-    start_state = preset["start_state"]
-    end_state = preset["end_state"]
-    obstacles = preset["obstacles"]
-
-    if isinstance(start_state, dict):
-        start_state = start_state["fort_santiago"]
-    if isinstance(end_state, dict):
-        end_state = end_state["enter_exit4"]
+    environment = PRESET_ENVIRONMENTS[1]
 
     env = Environment(
-        grid=grid,
-        start_state=start_state,
-        end_state=end_state,
+        grid=environment["grid_size"],
+        start_state=environment["start_state"]["fort_santiago"],
+        end_state=environment["end_state"]["enter_exit4"],
         agent=agent,
-        episodes=episodes,
+        episodes=2000,
         ep_tracker=10,
-        no_of_obstacles=0,
-        static_obstacles=obstacles,
-        is_dynamic_obs=False
+        no_of_obstacles=3,
+        static_obstacles=environment["obstacles"],
+        is_dynamic_obs=True
     )
 
     env.generate_obstacles()
@@ -122,8 +103,6 @@ def simulate(grid_size=None, episodes=100, preset=None):
         env.tracker.record_episode(
             success=env.agent_pos == env.end_state
         )
-
-        env.tracker.record_qtable_metrics()
 
         if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - episode_start_time

@@ -5,7 +5,7 @@ from ..visualizer import Visualizer
 import time
 import tracemalloc
 
-def simulate(grid_size=None, episodes=100, preset=None):
+def simulate():
 
     state_dim = 29
     learning_rate = 0.0005
@@ -45,34 +45,20 @@ def simulate(grid_size=None, episodes=100, preset=None):
     )
 
     environment = PRESET_ENVIRONMENTS[1]
-    if preset is None:
-        preset = PRESET_ENVIRONMENTS[1]
-
-    grid = grid_size if grid_size is not None else preset["grid_size"]
-
-    start_state = preset["start_state"]
-    end_state = preset["end_state"]
-    obstacles = preset["obstacles"]
-
-    if isinstance(start_state, dict):
-        start_state = start_state["fort_santiago"]
-    if isinstance(end_state, dict):
-        end_state = end_state["enter_exit4"]
-    
-    # episodes = 2000
+    episodes = 2000
     ep_tracker = 10
-    no_of_obstacles = 0
-    is_dynamic_obs = False
+    no_of_obstacles = 5
+    is_dynamic_obs = True
 
     env = Environment(
-        grid=grid,
-        start_state=start_state,
-        end_state=end_state,
+        grid=environment["grid_size"],
+        start_state=environment["start_state"],
+        end_state=environment["end_state"],
         agent=agent,
         episodes=episodes,
         ep_tracker=ep_tracker,
         no_of_obstacles=no_of_obstacles,
-        static_obstacles=obstacles,
+        static_obstacles=environment["obstacles"],
         is_dynamic_obs=is_dynamic_obs,
     )
 
