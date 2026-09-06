@@ -41,49 +41,49 @@ PRESET_ENVIRONMENTS = [
         'end_state': (6, 6),
         'obstacles': set(),
     },
-    {   # 4
+    {   # 3
         'name': 'Obstacle-Free (10x10)',
         'grid_size': 10,
         'start_state': (0, 0),
         'end_state': (9, 9),
         'obstacles': set(),
     },   
-    {   # 5
+    {   # 4
         'name': 'Obstacle-Free (20x20)',
         'grid_size': 20,
         'start_state': (0, 0),
         'end_state': (19, 19),
         'obstacles': set(),
     },   
-    {   # 6
+    {   # 5
         'name': 'Obstacle-Free (30x30)',
         'grid_size': 30,
         'start_state': (0, 0),
         'end_state': (29, 29),
         'obstacles': set(),
     },   
-    {   # 7
+    {   # 6
         'name': 'Obstacle-Free (40x40)',
         'grid_size': 40,
         'start_state': (0, 0),
         'end_state': (39, 39),
         'obstacles': set(),
     },   
-    {   # 8
+    {   # 7
         'name': 'Obstacle-Free (50x50)',
         'grid_size': 50,
         'start_state': (0, 0),
         'end_state': (49, 49),
         'obstacles': set(),
     },   
-    {   # 9
+    {   # 8
         'name': 'Obstacle-Free (75x75)',
         'grid_size': 75,
         'start_state': (0, 0),
         'end_state': (74, 74),
         'obstacles': set(),
     },   
-    {   # 10
+    {   # 9
         'name': 'Obstacle-Free (100x100)',
         'grid_size': 100,
         'start_state': (0, 0),

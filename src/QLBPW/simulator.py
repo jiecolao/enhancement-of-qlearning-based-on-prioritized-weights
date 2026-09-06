@@ -6,7 +6,7 @@ import tracemalloc
 import numpy as np
 import time
 
-def simulate():
+def simulate(grid_size=None, episodes=20, preset=None):
 
     agent = Agent(
         alpha=0.1, 
@@ -21,18 +21,32 @@ def simulate():
         batch_size=2000, 
     )
     
-    environment = PRESET_ENVIRONMENTS[1]
+    if preset is None:
+        preset = next(
+            environment for environment in PRESET_ENVIRONMENTS
+            if (
+                environment["grid_size"] == 20
+                and isinstance(environment["start_state"], tuple)
+                and isinstance(environment["end_state"], tuple)
+            )
+        )
+
+    grid = grid_size if grid_size is not None else preset["grid_size"]
+
+    start_state = preset["start_state"]
+    end_state = preset["end_state"]
+    obstacles = preset["obstacles"]
 
     env = Environment(
-        grid=environment["grid_size"],
-        start_state=environment["start_state"]["fort_santiago"],
-        end_state=environment["end_state"]["enter_exit4"],
+        grid=grid,
+        start_state=start_state,
+        end_state=end_state,
         agent=agent,
-        episodes=2000,
+        episodes=episodes,
         ep_tracker=10,
-        no_of_obstacles=3,
-        static_obstacles=environment["obstacles"],
-        is_dynamic_obs=True
+        no_of_obstacles=0,
+        static_obstacles=obstacles,
+        is_dynamic_obs=False
     )
 
     env.generate_obstacles()
@@ -103,6 +117,8 @@ def simulate():
         env.tracker.record_episode(
             success=env.agent_pos == env.end_state
         )
+
+        env.tracker.record_qtable_metrics()
 
         if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - episode_start_time
