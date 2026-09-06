@@ -5,7 +5,7 @@ from visualizer import Visualizer
 import time
 import tracemalloc
 
-def simulate(grid_size=None, episodes=20, preset=None):
+def simulate(grid_size=None, episodes=100, preset=None):
 
     state_dim = 29
     learning_rate = 0.0005

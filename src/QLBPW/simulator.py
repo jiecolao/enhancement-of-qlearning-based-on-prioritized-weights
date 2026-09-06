@@ -6,7 +6,7 @@ import tracemalloc
 import numpy as np
 import time
 
-def simulate(grid_size=None, episodes=20, preset=None):
+def simulate(grid_size=None, episodes=100, preset=None):
 
     agent = Agent(
         alpha=0.1, 
