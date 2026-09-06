@@ -400,6 +400,142 @@ class Visualizer:
 
         plt.show()
 
+    def plot_state_space_qtable_memory(
+        self,
+        state_counts,
+        qtable_memory,
+        grid_sizes=None,
+        title="QLBPW Q-Table Memory vs State Space",
+        save_fig=False,
+    ):
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+
+        x = np.asarray(state_counts)
+        y = np.asarray(qtable_memory)
+
+        ax.plot(
+            x,
+            y,
+            marker="o",
+            linewidth=2,
+            label="QLBPW"
+        )
+
+        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.set_xlabel("Number of Represented States")
+        ax.set_ylabel("Q-Table Value Memory (MB)")
+        ax.grid(True, linestyle="--", alpha=0.6)
+        ax.legend()
+
+        if grid_sizes is not None:
+            ax.set_xticks(x)
+            ax.set_xticklabels(
+                [f"{g}×{g}" for g in grid_sizes],
+                rotation=45
+            )
+
+        fig.tight_layout()
+
+        if save_fig:
+            self._save_to_qlbpw(
+                title="state_space_qtable_memory",
+                fig=fig
+            )
+
+        plt.show()
+
+    def plot_state_space_memory_comparison(
+            self,
+            grid_sizes,
+            qlbpw_memory,
+            eqlbpw_memory,
+            title="Peak Memory vs Grid Size",
+            save_fig=False,
+    ):
+        """
+        Compare memory usage of QLBPW and EQLBPW as the
+        environment/state space increases.
+        """
+
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+
+        ax.plot(
+            grid_sizes,
+            qlbpw_memory,
+            marker="o",
+            linewidth=2,
+            label="QLBPW"
+        )
+
+        ax.plot(
+            grid_sizes,
+            eqlbpw_memory,
+            marker="o",
+            linewidth=2,
+            label="EQLBPW"
+        )
+
+        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.set_xlabel("Grid Size")
+        ax.set_ylabel("Peak Python Traced Memory (MB)")
+        ax.grid(True, linestyle="--", alpha=0.6)
+        ax.legend()
+
+        fig.tight_layout()
+
+        if save_fig:
+            self._save_to_eqlbpw(
+                title="state_space_memory_comparison",
+                fig=fig
+            )
+
+        plt.show()
+
+    def plot_state_space_training_time(
+            self,
+            grid_sizes,
+            qlbpw_times,
+            eqlbpw_times,
+            title="Training Time vs Grid Size",
+            save_fig=False,
+    ):
+        """
+        Compare training time as the state space increases.
+        """
+
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+
+        ax.plot(
+            grid_sizes,
+            qlbpw_times,
+            marker="o",
+            linewidth=2,
+            label="QLBPW"
+        )
+
+        ax.plot(
+            grid_sizes,
+            eqlbpw_times,
+            marker="o",
+            linewidth=2,
+            label="EQLBPW"
+        )
+
+        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.set_xlabel("Grid Size")
+        ax.set_ylabel("Training Time (seconds)")
+        ax.grid(True, linestyle="--", alpha=0.6)
+        ax.legend()
+
+        fig.tight_layout()
+
+        if save_fig:
+            self._save_to_eqlbpw(
+                title="state_space_training_time",
+                fig=fig
+            )
+
+        plt.show()
 
 if __name__=="__main__":
     vis = Visualizer(None, None)
