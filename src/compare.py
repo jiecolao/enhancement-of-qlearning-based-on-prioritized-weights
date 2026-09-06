@@ -10,8 +10,24 @@ import numpy as np
 import torch
 import time
 import tracemalloc
+import random
 
 STATE_SPACE_PRESETS = PRESET_ENVIRONMENTS[3:9]
+
+# Fixed 9x9 map for testing whether QLBPW can converge to a
+# valid but suboptimal route when a shorter valid route exists.
+# BFS should be used as the ground truth for the shortest route.
+LOCAL_OPTIMUM_PRESET = {
+    "name": "QLBPW Local Optimum Test",
+    "grid_size": 9,
+    "start_state": (0, 0),
+    "end_state": (8, 8),
+    "obstacles": {
+        (0, 8), (1, 0), (1, 4), (2, 1), (2, 3), (2, 4),
+        (3, 0), (4, 4), (4, 8), (5, 5), (6, 5), (6, 7),
+        (7, 7), (8, 4), (8, 6), (8, 7),
+    },
+}
 
 
 def _measure_simulation(simulate):
@@ -59,6 +75,8 @@ def measure_elapsed_time_and_memory_usage(save_fig=False):
     )
 
     return results
+
+
 def run_state_space_experiment(
         grid_sizes=None,
         save_fig=False
@@ -136,6 +154,7 @@ def run_state_space_experiment(
 
     return results
 
+
 def plot_state_space_results(results, save_fig=False):
     visualizer = Visualizer(
         agent=None,
@@ -198,6 +217,7 @@ def plot_state_space_results(results, save_fig=False):
         save_fig=save_fig
     )
 
+
 def _greedy_path(agent, env, is_dqn):
     state = env.start_state
     path = [state]
@@ -221,6 +241,165 @@ def _greedy_path(agent, env, is_dqn):
             break
 
     return path, total_reward
+
+
+def _bfs_shortest_path(env):
+    """Return one shortest valid path using the environment's grid and obstacles."""
+    from collections import deque
+
+    start = env.start_state
+    goal = env.end_state
+    queue = deque([(start, [start])])
+    visited = {start}
+
+    while queue:
+        state, path = queue.popleft()
+        if state == goal:
+            return path
+
+        for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+            next_state = (state[0] + dx, state[1] + dy)
+            if not (
+                0 <= next_state[0] < env.grid_cols
+                and 0 <= next_state[1] < env.grid_rows
+            ):
+                continue
+            if next_state in env.obstacles or next_state in visited:
+                continue
+
+            visited.add(next_state)
+            queue.append((next_state, path + [next_state]))
+
+    return None
+
+
+def run_local_optimum_experiment(episodes=100, seeds=(0, 1, 2, 3, 4)):
+    """
+    Test whether QLBPW can converge to a valid but suboptimal route.
+
+    The environment is fixed across runs. Each seed changes only the
+    stochastic training process. The BFS shortest path is the ground truth.
+    """
+    results = []
+
+    # Validate the experimental map before training.
+    validation_agent = QLBPWAgent(
+        alpha=0.1,
+        gamma=0.9,
+        beta=0.3,
+        e=0.9,
+        e_min=0.1,
+        e_decay=0.998,
+        no_of_states=4,
+        no_of_actions=4,
+        max_buffer=20,
+        batch_size=2000,
+    )
+    validation_env = QLBPWEnvironment(
+        grid=LOCAL_OPTIMUM_PRESET["grid_size"],
+        start_state=LOCAL_OPTIMUM_PRESET["start_state"],
+        end_state=LOCAL_OPTIMUM_PRESET["end_state"],
+        agent=validation_agent,
+        episodes=1,
+        ep_tracker=1,
+        no_of_obstacles=0,
+        static_obstacles=LOCAL_OPTIMUM_PRESET["obstacles"],
+        is_dynamic_obs=False,
+    )
+    validation_env.generate_obstacles()
+
+    shortest_path = _bfs_shortest_path(validation_env)
+    if shortest_path is None:
+        raise ValueError("LOCAL_OPTIMUM_PRESET has no valid path from start to goal.")
+
+    shortest_steps = len(shortest_path) - 1
+    print("\n" + "=" * 60)
+    print("QLBPW Local-Optimum Experiment")
+    print("=" * 60)
+    print(f"Grid: {LOCAL_OPTIMUM_PRESET['grid_size']} x {LOCAL_OPTIMUM_PRESET['grid_size']}")
+    print(f"Shortest valid path (BFS): {shortest_steps} steps")
+    print(f"Training episodes per seed: {episodes}")
+    print(f"Seeds: {tuple(seeds)}")
+
+    for seed in seeds:
+        random.seed(seed)
+        np.random.seed(seed)
+
+        agent, env = QLBPW_simulate(
+            grid_size=LOCAL_OPTIMUM_PRESET["grid_size"],
+            episodes=episodes,
+            preset=LOCAL_OPTIMUM_PRESET,
+        )
+
+        learned_path, learned_reward = _greedy_path(
+            agent,
+            env,
+            is_dqn=False,
+        )
+
+        learned_steps = len(learned_path) - 1
+        reached_goal = learned_path[-1] == env.end_state
+        is_optimal = reached_goal and learned_steps == shortest_steps
+        optimality = (
+            shortest_steps / learned_steps
+            if reached_goal and learned_steps > 0
+            else 0.0
+        )
+
+        results.append({
+            "seed": seed,
+            "goal_reached": reached_goal,
+            "learned_steps": learned_steps,
+            "shortest_steps": shortest_steps,
+            "optimal": is_optimal,
+            "optimality": optimality,
+            "total_reward": learned_reward,
+            "path": learned_path,
+        })
+
+        print(
+            f"Seed {seed}: "
+            f"goal={reached_goal}, "
+            f"learned={learned_steps}, "
+            f"optimal={is_optimal}, "
+            f"optimality={optimality:.3f}, "
+            f"reward={learned_reward}"
+        )
+
+    successful_runs = [result for result in results if result["goal_reached"]]
+    suboptimal_runs = [
+        result for result in successful_runs
+        if not result["optimal"]
+    ]
+
+    success_rate = (
+        len(successful_runs) / len(results)
+        if results else 0.0
+    )
+    optimal_solution_rate = (
+        sum(result["optimal"] for result in successful_runs) / len(successful_runs)
+        if successful_runs else 0.0
+    )
+    suboptimal_solution_rate = (
+        len(suboptimal_runs) / len(successful_runs)
+        if successful_runs else 0.0
+    )
+
+    print("\nSummary")
+    print(f"Success rate: {success_rate:.2%}")
+    print(f"Optimal-solution rate: {optimal_solution_rate:.2%}")
+    print(f"Suboptimal-solution rate: {suboptimal_solution_rate:.2%}")
+
+    return {
+        "preset": LOCAL_OPTIMUM_PRESET,
+        "shortest_path": shortest_path,
+        "shortest_steps": shortest_steps,
+        "runs": results,
+        "success_rate": success_rate,
+        "optimal_solution_rate": optimal_solution_rate,
+        "suboptimal_solution_rate": suboptimal_solution_rate,
+    }
+
 
 def run_comparison(save_fig=False):
     qlbpw_agent, qlbpw_env = QLBPW_simulate()
@@ -249,56 +428,6 @@ def run_comparison(save_fig=False):
 
 
 if __name__ == "__main__":
-    # EQLBPW_agent = EQLBPWAgent(
-    #     alpha=0.001,              # Learning Rate
-    #     gamma=0.95,              # Discount Factor
-    #     beta=0.3,               # Beta
-    #     e=1.0,                  # Epsilon
-    #     e_min=0.05,              # Minimun Epsilon
-    #     e_decay=0.97,          # Epsilon Decay
-    #     no_of_actions=4,        # Actions: 1=up, 2=right, 3=down, 4=left 
-    #     batch_size=64,          # The Number of Experiences To Be Sampled
-    #     max_buffer=10000,        # Max Number of Stored Experiences
-    #     target_sync_freq=5      # When should the Target Network sync
-    # )
-
-    # QLBPW_agent = QLBPWAgent(
-    #     alpha=0.1, 
-    #     gamma=0.9, 
-    #     beta=0.3,
-    #     e=0.9, 
-    #     e_min=0.1, 
-    #     e_decay=0.998,        
-    #     no_of_states=4, 
-    #     no_of_actions=4,
-    #     max_buffer=20,
-    #     batch_size=2000, 
-    # )
-
-    # EQLBPW_env = EQLBPWEnvironment(
-    #     grid = 20,                                      # Grid Environment gridxgrid
-    #     start_state = (4, 0),                           # Agent Starting Position
-    #     end_state = (16, 7),                           # Finish Line
-    #     agent = EQLBPW_agent,                                  # Agent
-    #     episodes = 20,                                   # Episodes to train
-    #     ep_tracker = 5,                                 # How and when should the tracker print the summary
-    #     no_of_obstacles = 0,                            # Number of obstacles to appear. (To spawn, set is_dynamic_obs to True)
-    #     static_obstacles = OBSTACLES[1]["obstacles"],   # Premade obstacles
-    #     is_dynamic_obs = True,                          # Obstacle Event Trigger
-    # )
-
-    # QLBPW_env = QLBPWEnvironment(
-    #     grid=20,
-    #     start_state=(4, 0),
-    #     end_state=(16, 7),
-    #     agent=QLBPW_agent,
-    #     episodes=20,
-    #     ep_tracker=5,
-    #     no_of_obstacles=0,
-    #     static_obstacles= OBSTACLES[1]["obstacles"],
-    #     is_dynamic_obs=True
-    # )
-
     results = run_state_space_experiment(
         save_fig=True
     )
