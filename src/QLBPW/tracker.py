@@ -74,8 +74,6 @@ class EnvironmentTracker:
             f"{'Discount factor (gamma):':<35}| {self.agent.gamma}\n"
             f"{'Beta:':<35}| {self.agent.beta}\n"
             f"{'Epsilon:':<35}| {self.agent.e}\n"
-            f"{'Minimum epsilon:':<35}| {self.agent.e_min}\n"
-            f"{'Epsilon decay:':<35}| {self.agent.e_decay}\n"
             f"{'Actions:':<35}| {self.agent.no_of_actions}\n"
             f"{'Replay buffer capacity:':<35}| {self.agent.max_buffer}\n"
             f"{'Replay batch size:':<35}| {self.agent.batch_size}\n"
