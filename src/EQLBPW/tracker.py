@@ -68,6 +68,7 @@ class EnvironmentTracker:
         self.full_log_path = os.path.join(self.log_folder, self.log_filename)
         self._manage_log_limit(max_logs=10)
         self._print_and_log(self._agent_details())
+        self._print_and_log(self._environment_details())
 
     def _agent_details(self):
         parameter_count = sum(
@@ -97,6 +98,23 @@ class EnvironmentTracker:
             f"{'Distance priority weight:':<30}| {self.agent.distance_weight}\n"
             f"{'Main network parameters:':<30}| {parameter_count}\n"
             f"{'Main network:':<30}|\n{self.agent.main_net}\n"
+            + "="*40
+        )
+
+    def _environment_details(self):
+        return (
+            "\n" + "="*40 + "\n"
+            "ENVIRONMENT INITIALIZED\n"
+            + "="*40 + "\n"
+            f"{'Grid size:':<30}| {self.env.grid_rows} x {self.env.grid_cols}\n"
+            f"{'Start state:':<30}| {self.env.start_state}\n"
+            f"{'End state:':<30}| {self.env.end_state}\n"
+            f"{'Episodes:':<30}| {self.env.episodes}\n"
+            f"{'Episodes per tracker interval:':<30}| {self.env.ep_tracker}\n"
+            f"{'Static obstacles:':<30}| {len(self.env.static_obstacles)}\n"
+            f"{'Dynamic obstacles enabled:':<30}| {self.env.is_dynamic_obs}\n"
+            f"{'Dynamic obstacle count:':<30}| {self.env.no_of_obstacles}\n"
+            f"{'Maximum steps per episode:':<30}| {self.env.max_steps}\n"
             + "="*40
         )
 

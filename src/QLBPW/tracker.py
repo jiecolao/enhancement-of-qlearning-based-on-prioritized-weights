@@ -62,6 +62,7 @@ class EnvironmentTracker:
         self.full_log_path = os.path.join(self.log_folder, self.log_filename)
         self._manage_log_limit(max_logs=10)
         self._print_and_log(self._agent_details())
+        self._print_and_log(self._environment_details())
 
     def _agent_details(self):
         return (
@@ -78,6 +79,23 @@ class EnvironmentTracker:
             f"{'Replay buffer capacity:':<35}| {self.agent.max_buffer}\n"
             f"{'Replay batch size:':<35}| {self.agent.batch_size}\n"
             f"{'Q-table states at initialization:':<35}| {len(self.agent.Q)}\n"
+            + "="*40
+        )
+
+    def _environment_details(self):
+        return (
+            "\n" + "="*40 + "\n"
+            "ENVIRONMENT INITIALIZED\n"
+            + "="*40 + "\n"
+            f"{'Grid size:':<35}| {self.env.grid_rows} x {self.env.grid_cols}\n"
+            f"{'Start state:':<35}| {self.env.start_state}\n"
+            f"{'End state:':<35}| {self.env.end_state}\n"
+            f"{'Episodes:':<35}| {self.env.episodes}\n"
+            f"{'Episodes per tracker interval:':<35}| {self.env.ep_tracker}\n"
+            f"{'Static obstacles:':<35}| {len(self.env.static_obstacles)}\n"
+            f"{'Dynamic obstacles enabled:':<35}| {self.env.is_dynamic_obs}\n"
+            f"{'Dynamic obstacle count:':<35}| {self.env.no_of_obstacles}\n"
+            f"{'Maximum steps per episode:':<35}| {self.env.max_steps}\n"
             + "="*40
         )
 
