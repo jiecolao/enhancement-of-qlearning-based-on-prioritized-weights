@@ -6,6 +6,7 @@ import time
 import tracemalloc
 
 def simulate(grid_size=None, episodes=1000, preset=None):
+    start_time = time.time()
 
     state_dim = 29
     learning_rate = 0.0005

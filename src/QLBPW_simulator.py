@@ -7,6 +7,7 @@ import numpy as np
 import time
 
 def simulate(grid_size=None, episodes=1000, preset=None):
+    start_time = time.time()
 
     agent = Agent(
         alpha=0.1, 
