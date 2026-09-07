@@ -62,21 +62,26 @@ def refresh_tracker_log(log_placeholder, environment):
 
 
 def evaluate_qlbpw_path(agent, environment):
+	original_position = environment.agent_pos
+	original_steps = environment.steps
 	state = environment.start_state
 	path = [state]
 	total_reward = 0.0
-	max_steps = environment.grid_size * environment.grid_size * 2
+	max_steps = environment.max_steps
 
-	for _ in range(max_steps):
-		action = agent.epsilon_greedy(state)
-		next_state, reward, terminal = environment.take_step(state, action)
-		total_reward += reward
-		if next_state == state and not terminal:
-			break
-		path.append(next_state)
-		state = next_state
-		if terminal:
-			break
+	try:
+		for _ in range(max_steps):
+			q_values = agent.Q.get(state, np.zeros(agent.no_of_actions))
+			action = np.argmax(q_values)
+			next_state, reward, terminal = environment.take_step(state, action)
+			total_reward += reward
+			path.append(next_state)
+			state = next_state
+			if terminal:
+				break
+	finally:
+		environment.agent_pos = original_position
+		environment.steps = original_steps
 	return path, total_reward, state == environment.end_state
 
 
@@ -87,7 +92,7 @@ def evaluate_eqlbpw_path(agent, environment):
 	state = environment.start_state
 	path = [state]
 	total_reward = 0.0
-	max_steps = environment.grid_size * environment.grid_size * 2
+	max_steps = environment.max_steps
 
 	agent.main_net.eval()
 	try:
@@ -114,33 +119,37 @@ def evaluate_eqlbpw_path(agent, environment):
 	return path, total_reward, state == environment.end_state
 
 
+def resolve_preset(preset):
+	start_state = preset["start_state"]
+	end_state = preset["end_state"]
+	if isinstance(start_state, dict):
+		start_state = start_state["fort_santiago"]
+	if isinstance(end_state, dict):
+		end_state = end_state["enter_exit4"]
+
+	return {
+		**preset,
+		"start_state": start_state,
+		"end_state": end_state,
+	}
+
+
 def build_environment(environment_class, agent, preset, episodes, dynamic,
 					  dynamic_count):
+	preset = resolve_preset(preset)
 	environment = environment_class(
 		grid=preset["grid_size"],
 		start_state=preset["start_state"],
 		end_state=preset["end_state"],
 		agent=agent,
 		episodes=episodes,
-		ep_tracker=1,
+		ep_tracker=10,
 		no_of_obstacles=dynamic_count,
 		static_obstacles=preset["obstacles"],
 		is_dynamic_obs=dynamic,
 	)
 	environment.generate_obstacles()
-	refresh_shortest_path(environment)
 	return environment
-
-
-def refresh_shortest_path(environment):
-	tracker = getattr(environment, "tracker", None)
-	if tracker is None or not hasattr(tracker, "calculate_shortest_path"):
-		return
-	tracker.shortest_path = tracker.calculate_shortest_path()
-	tracker.shortest_path_steps = (
-		len(tracker.shortest_path) - 1
-		if tracker.shortest_path is not None else None
-	)
 
 
 def train_eqlbpw(preset, settings, progress_bar, status_text, metrics,
@@ -168,6 +177,7 @@ def train_eqlbpw(preset, settings, progress_bar, status_text, metrics,
 	refresh_tracker_log(log_placeholder, environment)
 	rewards = []
 	started = time.time()
+	interval_started = started
 	for episode in range(environment.episodes):
 		episode_number = episode + 1
 		state = environment.reset()
@@ -175,7 +185,6 @@ def train_eqlbpw(preset, settings, progress_bar, status_text, metrics,
 		environment.tracker.rewards_per_ep = 0
 		episode_reward = 0.0
 		terminal = False
-		episode_started = time.time()
 		while not terminal and environment.tracker.steps_per_ep < environment.max_steps:
 			action = agent.e_greedy(state)
 			next_position, reward, terminal, info = environment.take_step(
@@ -213,23 +222,23 @@ def train_eqlbpw(preset, settings, progress_bar, status_text, metrics,
 			success=terminal and environment.agent_pos == environment.end_state
 		)
 		rewards.append(episode_reward)
-		if settings["dynamic"] and settings["obstacle_interval"] > 0 and episode_number % settings["obstacle_interval"] == 0:
+		if environment.is_dynamic_obs and episode_number % 10 == 0:
 			environment.generate_obstacles()
-			refresh_shortest_path(environment)
 		if episode_number % environment.ep_tracker == 0:
 			environment.tracker.print_episode_summary(
 				curr_ep=episode_number, max_ep=environment.episodes,
 				ep_tracker=environment.ep_tracker,
-				elapsed=time.time() - episode_started,
+				elapsed=time.time() - interval_started,
 				max_steps=environment.max_steps, epsilon=agent.e,
 			)
+			environment.tracker.print_learned_path()
+			interval_started = time.time()
 		refresh_tracker_log(log_placeholder, environment)
 		progress_bar.progress((episode + 1) / environment.episodes)
 		status_text.write(f"Episode {episode + 1}/{environment.episodes}")
 		metrics[0].metric("Episode", episode + 1)
 		metrics[1].metric("Last reward", f"{episode_reward:.2f}")
 		metrics[2].metric("Epsilon", f"{agent.e:.3f}")
-	agent.e = 0.0
 	environment.tracker.print_learned_path()
 	environment.tracker.print_total_summary(start_time=started)
 	refresh_tracker_log(log_placeholder, environment)
@@ -240,8 +249,7 @@ def train_qlbpw(preset, settings, progress_bar, status_text, metrics,
 				log_placeholder):
 	agent = QLBPWAgent(
 		alpha=settings["alpha"], gamma=settings["gamma"], beta=0.3,
-		e=settings["epsilon"], e_min=settings["epsilon_min"],
-		e_decay=settings["epsilon_decay"], no_of_states=preset["grid_size"] ** 2,
+		e=settings["epsilon"],
 		no_of_actions=4, max_buffer=settings["buffer_size"],
 		batch_size=settings["batch_size"],
 	)
@@ -252,19 +260,34 @@ def train_qlbpw(preset, settings, progress_bar, status_text, metrics,
 	refresh_tracker_log(log_placeholder, environment)
 	rewards = []
 	started = time.time()
+	interval_started = started
 	for episode in range(environment.episodes):
 		episode_number = episode + 1
 		environment.agent_pos = environment.start_state
+		environment.steps = 0
 		environment.tracker.steps_per_ep = 0
 		episode_reward = 0.0
 		terminal = False
-		episode_started = time.time()
 		while not terminal and environment.tracker.steps_per_ep < environment.max_steps:
 			state = environment.agent_pos
 			action = agent.epsilon_greedy(state)
 			next_state, reward, terminal = environment.take_step(state, action)
-			agent.memory.push(state, action, reward, next_state, 0.0)
-			if len(agent.memory) >= agent.batch_size:
+
+			if state not in agent.Q:
+				agent.Q[state] = np.zeros(agent.no_of_actions)
+
+			current_q = agent.Q[state][action]
+			if terminal:
+				td_target = reward
+			else:
+				if next_state not in agent.Q:
+					agent.Q[next_state] = np.zeros(agent.no_of_actions)
+				max_q_next = np.max(agent.Q[next_state])
+				td_target = reward + agent.gamma * max_q_next
+
+			td_error = td_target - current_q
+			agent.memory.push(state, action, reward, next_state, td_error)
+			if len(agent.memory) > 0:
 				sample = agent.adjust_lr()
 				agent.update_Q(*sample, end_state=environment.end_state,
 							   obstacles=environment.obstacles)
@@ -272,24 +295,29 @@ def train_qlbpw(preset, settings, progress_bar, status_text, metrics,
 			episode_reward += reward
 			environment.tracker.steps_per_ep += 1
 			environment.tracker.steps += 1
+			environment.tracker.rewards += reward
+			environment.tracker.rewards_per_ep += reward
 			if reward < 0:
-				environment.tracker.rewards -= reward
 				environment.tracker.obstacle_encountered += 1
 				environment.tracker.neg_rewards += reward
 			elif reward > 0:
-				environment.tracker.rewards += reward
-				environment.tracker.rewards_per_ep += reward
 				environment.tracker.pos_rewards += reward
 				environment.tracker.goal_count += 1
-		agent.e = max(agent.e_min, agent.e * agent.e_decay)
+		environment.tracker.record_episode(
+			success=environment.agent_pos == environment.end_state
+		)
 		rewards.append(episode_reward)
+		if environment.is_dynamic_obs and episode_number % 10 == 0:
+			environment.generate_obstacles()
 		if episode_number % environment.ep_tracker == 0:
 			environment.tracker.print_episode_summary(
 				curr_ep=episode_number, max_ep=environment.episodes,
 				ep_tracker=environment.ep_tracker,
-				elapsed=time.time() - episode_started,
+				elapsed=time.time() - interval_started,
 				max_steps=environment.max_steps, epsilon=agent.e,
 			)
+			environment.tracker.print_learned_path()
+			interval_started = time.time()
 		refresh_tracker_log(log_placeholder, environment)
 		progress_bar.progress((episode + 1) / environment.episodes)
 		status_text.write(f"Episode {episode + 1}/{environment.episodes}")
@@ -306,35 +334,44 @@ def algorithm_page(algorithm):
 	st.title(f"{algorithm} Gridworld Dashboard")
 	st.caption("Train an agent, inspect the learned route, and compare the map with its text representation.")
 
-	preset_name = st.selectbox("Environment preset", [preset["name"] for preset in PRESET_ENVIRONMENTS])
-	preset = next(item for item in PRESET_ENVIRONMENTS if item["name"] == preset_name)
+	preset_name = st.selectbox(
+		"Environment preset",
+		[preset["name"] for preset in PRESET_ENVIRONMENTS],
+		index=1,
+	)
+	preset = resolve_preset(next(item for item in PRESET_ENVIRONMENTS if item["name"] == preset_name))
 	left_config, right_config = st.columns(2)
 	with left_config:
-		episodes = st.slider("Episodes", 10, 500, 100, step=10)
-		alpha = st.slider("Learning rate", 0.001, 0.5, 0.1, step=0.005)
-		gamma = st.slider("Discount factor", 0.5, 0.99, 0.9, step=0.01)
-		epsilon = st.slider("Initial epsilon", 0.1, 1.0, 0.9, step=0.05)
-	with right_config:
-		epsilon_min = st.slider("Minimum epsilon", 0.01, 0.5, 0.1, step=0.01)
-		epsilon_decay = st.slider("Epsilon decay", 0.90, 0.999, 0.995, step=0.001)
-		batch_size = st.number_input("Batch size", 1, 256, 20)
-		buffer_size = st.number_input("Replay capacity", 10, 10000, 2000)
+		episodes = st.slider("Episodes", 10, 2000, 200, step=10)
 		if algorithm == "EQLBPW":
+			alpha = st.number_input("Learning rate", 0.0001, 0.5, 0.0005, step=0.0001, format="%.4f")
+			gamma = st.slider("Discount factor", 0.5, 0.99, 0.95, step=0.01)
+		else:
+			alpha = st.slider("Learning rate", 0.001, 0.5, 0.1, step=0.005)
+			gamma = st.slider("Discount factor", 0.5, 0.99, 0.9, step=0.01)
+		epsilon = st.slider("Initial epsilon", 0.1, 1.0, 1.0 if algorithm == "EQLBPW" else 0.9, step=0.05)
+	with right_config:
+		if algorithm == "EQLBPW":
+			epsilon_min = st.slider("Minimum epsilon", 0.01, 0.5, 0.05, step=0.01)
+			epsilon_decay = st.slider("Epsilon decay", 0.90, 0.999, 0.995, step=0.001)
+			batch_size = st.number_input("Batch size", 1, 256, 64)
+			buffer_size = st.number_input("Replay capacity", 10, 50000, 50000)
 			priority_alpha = st.slider("Priority alpha", 0.0, 1.0, 0.6, step=0.05)
 			beta_start = st.slider("Beta start", 0.0, 1.0, 0.4, step=0.05)
 			beta_end = st.slider("Beta end", 0.0, 1.0, 1.0, step=0.05)
 			collision_weight = st.number_input("Collision priority weight", 0.0, 10.0, 1.0, step=0.5)
 			goal_weight = st.number_input("Goal priority weight", 0.0, 10.0, 2.0, step=0.5)
 			distance_weight = st.number_input("Distance priority weight", 0.0, 10.0, 0.5, step=0.5)
+			target_sync = st.number_input("Target sync frequency", 1, 100, 20)
 		else:
+			epsilon_min = epsilon_decay = None
+			batch_size = st.number_input("Batch size", 1, 256, 20)
+			buffer_size = st.number_input("Replay capacity", 10, 10000, 2000)
 			priority_alpha = beta_start = beta_end = 0.0
 			collision_weight = goal_weight = distance_weight = 0.0
+			target_sync = 1
 	dynamic = st.checkbox("Dynamic obstacles")
-	dynamic_count = st.slider("Dynamic obstacle count", 0, 30, 5) if dynamic else 0
-	obstacle_interval = st.number_input(
-		"Obstacle regeneration interval", 1, 500, 100
-	) if dynamic and algorithm == "EQLBPW" else 0
-	target_sync = st.number_input("Target sync frequency", 1, 100, 1) if algorithm == "EQLBPW" else 1
+	dynamic_count = st.slider("Dynamic obstacle count", 0, 30, 0) if dynamic else 0
 
 	settings = {
 		"episodes": episodes, "alpha": alpha, "gamma": gamma,
@@ -345,7 +382,6 @@ def algorithm_page(algorithm):
 		"priority_alpha": priority_alpha, "beta_start": beta_start,
 		"beta_end": beta_end, "collision_weight": collision_weight,
 		"goal_weight": goal_weight, "distance_weight": distance_weight,
-		"obstacle_interval": obstacle_interval,
 	}
 	map_column, terminal_column = st.columns(2)
 	with map_column:
