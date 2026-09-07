@@ -11,4 +11,6 @@ tests/*
 src/**/training_logs
 src/**/trained_agents
 
+src/**/data
+
 .env
