@@ -18,7 +18,7 @@ def simulate():
     e_decay = 0.995
     no_of_actions = 4
     batch_size = 64
-    max_buffer = 50000
+    max_buffer = 2000
     target_sync_freq = 20
 
     collision_weight = 1.0
@@ -45,10 +45,10 @@ def simulate():
     )
 
     environment = PRESET_ENVIRONMENTS[1]
-    episodes = 200
+    episodes = 500
     ep_tracker = 10
-    no_of_obstacles = 0
-    is_dynamic_obs = False
+    no_of_obstacles = 3
+    is_dynamic_obs = True
 
     env = Environment(
         grid=environment["grid_size"],
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     # trained_env.tracker.print_optimal_path()
     trained_env.tracker.print_total_summary(start_time=start_time)
-    # trained_agent.save(agent_name="test", save_memory=True)
+    trained_agent.save(agent_name="test", save_memory=True)
 
     # Visuals
     visual = Visualizer(agent=trained_agent, env=trained_env)

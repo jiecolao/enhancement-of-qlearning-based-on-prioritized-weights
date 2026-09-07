@@ -25,11 +25,11 @@ def simulate():
         start_state=environment["start_state"]["fort_santiago"],
         end_state=environment["end_state"]["enter_exit4"],
         agent=agent,
-        episodes=200,
+        episodes=500,
         ep_tracker=10,
-        no_of_obstacles=0,
+        no_of_obstacles=3,
         static_obstacles=environment["obstacles"],
-        is_dynamic_obs=False
+        is_dynamic_obs=True
     )
 
     env.generate_obstacles()
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     trained_env.tracker.print_learned_path()
     trained_env.tracker.print_total_summary(start_time=start_time)
-    # trained_agent.save(agent_name="test", save_memory=True)
+    trained_agent.save(agent_name="test", save_memory=True)
 
     # Visuals
     visual = Visualizer(agent=trained_agent, env=trained_env)
