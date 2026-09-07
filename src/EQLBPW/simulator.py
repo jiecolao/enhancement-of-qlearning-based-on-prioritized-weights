@@ -45,7 +45,7 @@ def simulate():
     )
 
     environment = PRESET_ENVIRONMENTS[1]
-    episodes = 500
+    episodes = 1000
     ep_tracker = 10
     no_of_obstacles = 3
     is_dynamic_obs = True

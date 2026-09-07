@@ -25,7 +25,7 @@ def simulate():
         start_state=environment["start_state"]["fort_santiago"],
         end_state=environment["end_state"]["enter_exit4"],
         agent=agent,
-        episodes=500,
+        episodes=1000,
         ep_tracker=10,
         no_of_obstacles=3,
         static_obstacles=environment["obstacles"],
