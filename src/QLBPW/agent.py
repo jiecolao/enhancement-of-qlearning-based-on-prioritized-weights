@@ -68,8 +68,6 @@ class Agent:
             "gamma": self.gamma,
             "beta": self.beta,
             "epsilon": self.e,
-            "epsilon_min": self.e_min,
-            "epsilon_decay": self.e_decay,
             "no_of_actions": self.no_of_actions,
             "batch_size": self.batch_size,
             "max_buffer": self.max_buffer,
