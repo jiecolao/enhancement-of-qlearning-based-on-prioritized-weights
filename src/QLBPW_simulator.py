@@ -53,6 +53,7 @@ def simulate(grid_size=None, episodes=100, preset=None):
 
     env.generate_obstacles()
     env.tracker.print_live_grid(env.agent_pos)
+    interval_start_time = time.time()
 
     for ep in range(env.episodes):
         episode_number = ep + 1
@@ -61,9 +62,6 @@ def simulate(grid_size=None, episodes=100, preset=None):
         env.tracker.steps_per_ep = 0
         env.tracker.rewards_per_ep = 0
         is_terminal = False
-
-        if episode_number % env.ep_tracker == 0:
-            episode_start_time = time.time()
 
         while not is_terminal and env.tracker.steps_per_ep < env.max_steps:
             action = agent.epsilon_greedy(env.agent_pos)
@@ -123,7 +121,7 @@ def simulate(grid_size=None, episodes=100, preset=None):
         env.tracker.record_qtable_metrics()
 
         if episode_number % env.ep_tracker == 0:
-            elapsed = time.time() - episode_start_time
+            elapsed = time.time() - interval_start_time
             env.tracker.print_episode_summary(
             curr_ep=episode_number, 
                 max_ep=env.episodes, 
@@ -132,9 +130,10 @@ def simulate(grid_size=None, episodes=100, preset=None):
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
+            interval_start_time = time.time()
+            env.tracker.print_learned_path()    # Tracker
 
-        if episode_number % 10 == 0:
-            # env.tracker.print_learned_path()    # Tracker
+        if env.is_dynamic_obs and episode_number % 10 == 0:
             env.generate_obstacles()            # Dynamic Obstacle
 
     return agent, env

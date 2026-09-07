@@ -44,7 +44,6 @@ def simulate(grid_size=None, episodes=100, preset=None):
         distance_weight=distance_weight,
     )
 
-    environment = PRESET_ENVIRONMENTS[1]
     if preset is None:
         preset = PRESET_ENVIRONMENTS[1]
 
@@ -59,7 +58,6 @@ def simulate(grid_size=None, episodes=100, preset=None):
     if isinstance(end_state, dict):
         end_state = end_state["enter_exit4"]
     
-    # episodes = 2000
     ep_tracker = 10
     no_of_obstacles = 0
     is_dynamic_obs = False
@@ -78,16 +76,13 @@ def simulate(grid_size=None, episodes=100, preset=None):
 
     env.generate_obstacles()                            # Initialize obstacles
     env.tracker.print_live_grid(env.agent_pos)          # Display Grid in Terminal 
+    interval_start_time = time.time()
 
     for ep in range(env.episodes):
         state = env.reset()
         is_terminal = False
 
         episode_number = ep + 1
-
-        # Tracker
-        if episode_number % env.ep_tracker == 0:
-            episode_start_time = time.time()
 
         while not is_terminal and env.tracker.steps_per_ep < env.max_steps:
             action = agent.e_greedy(state)
@@ -138,9 +133,10 @@ def simulate(grid_size=None, episodes=100, preset=None):
             agent.sync_target()
 
         # Tracker
+        env.tracker.record_episode(success = is_terminal and env.agent_pos == env.end_state)
+
         if episode_number % env.ep_tracker == 0:
-            elapsed = time.time() - episode_start_time
-            env.tracker.record_episode(success = is_terminal and env.agent_pos == env.end_state)
+            elapsed = time.time() - interval_start_time
             env.tracker.print_episode_summary(
                 curr_ep=episode_number,
                 max_ep=env.episodes,
@@ -149,11 +145,10 @@ def simulate(grid_size=None, episodes=100, preset=None):
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
-        else: 
-            env.tracker.record_episode(success=is_terminal and env.agent_pos == env.end_state)
-
-        if episode_number % 100 == 0:
+            interval_start_time = time.time()
             env.tracker.print_learned_path()    # Tracker
+
+        if env.is_dynamic_obs and episode_number % 10 == 0:
             env.generate_obstacles()            # Dynamic Obstacle
 
     return agent, env
