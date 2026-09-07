@@ -76,7 +76,7 @@ class EnvironmentTracker:
         )
         return (
             "\n" + "="*40 + "\n"
-            "AGENT INITIALIZED\n"
+            "EQLBPW AGENT INITIALIZED\n"
             + "="*40 + "\n"
             f"{'Agent type:':<30}| {type(self.agent).__name__}\n"
             f"{'State dimensions:':<30}| {self.agent.state_dim}\n"

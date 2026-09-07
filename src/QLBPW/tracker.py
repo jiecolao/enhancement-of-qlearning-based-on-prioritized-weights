@@ -67,7 +67,7 @@ class EnvironmentTracker:
     def _agent_details(self):
         return (
             "\n" + "="*40 + "\n"
-            "AGENT INITIALIZED\n"
+            "QLBPW AGENT INITIALIZED\n"
             + "="*40 + "\n"
             f"{'Agent type:':<35}| {type(self.agent).__name__}\n"
             f"{'Initial learning rate (alpha):':<35}| {self.agent.init_alpha}\n"
