@@ -217,13 +217,13 @@ if __name__ == "__main__":
         save_fig=True
     )
 
+    plot_state_space_results(
+        results,
+        save_fig=True
+    )
+    
     output_path = Path(__file__).resolve().parent / "datas" / "compare_state_space_results.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with output_path.open("w", encoding="utf-8") as file:
         json.dump(results, file, indent=2)
-
-    plot_state_space_results(
-        results,
-        save_fig=True
-    )
