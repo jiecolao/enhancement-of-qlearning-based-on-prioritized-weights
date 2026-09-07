@@ -4,36 +4,50 @@ from EQLBPW.environment import Environment as EQLBPWEnvironment
 from QLBPW.environment import Environment as QLBPWEnvironment
 
 
-class StochasticOverestimationQLBPWEnvironment(QLBPWEnvironment):
-    """Production QLBPW environment with zero-mean reward noise.
+class _RewardMatrixMixin:
+    """Add reproducible, episode/action-indexed reward noise to an environment."""
 
-    The movement dynamics and state representation remain those of the
-    production environment. Only the non-terminal reward is made stochastic.
-    """
-
-    def __init__(self, *args, reward_std=2.0, rng=None, **kwargs):
+    def _init_stochastic_rewards(self, reward_std, rng, reward_matrix):
         self.reward_std = float(reward_std)
         self.rng = rng if rng is not None else np.random.default_rng()
+        self.reward_matrix = None if reward_matrix is None else np.asarray(reward_matrix, dtype=float)
+        self.current_episode = 0
+
+        if self.reward_matrix is not None and self.reward_matrix.ndim != 2:
+            raise ValueError("reward_matrix must be a 2-D array: [episode, action]")
+        if self.reward_matrix is not None and self.reward_matrix.shape[1] < 4:
+            raise ValueError("reward_matrix must contain at least four action columns")
+
+    def start_episode(self, episode_index):
+        self.current_episode = int(episode_index)
+        if self.reward_matrix is not None and not 0 <= self.current_episode < len(self.reward_matrix):
+            raise IndexError("episode_index is outside reward_matrix")
+
+    def _noise(self, action):
+        if self.reward_matrix is not None:
+            return float(self.reward_matrix[self.current_episode, int(action)])
+        return float(self.rng.normal(0.0, self.reward_std))
+
+
+class StochasticOverestimationQLBPWEnvironment(_RewardMatrixMixin, QLBPWEnvironment):
+    """Production QLBPW environment with reproducible stochastic rewards."""
+
+    def __init__(self, *args, reward_std=2.0, rng=None, reward_matrix=None, **kwargs):
+        self._init_stochastic_rewards(reward_std, rng, reward_matrix)
         super().__init__(*args, **kwargs)
 
     def take_step(self, state, action):
         next_state, reward, terminal = super().take_step(state, action)
         if not terminal:
-            reward = float(reward) + float(self.rng.normal(0.0, self.reward_std))
+            reward = float(reward) + self._noise(action)
         return next_state, reward, terminal
 
 
-class StochasticOverestimationEQLBPWEnvironment(EQLBPWEnvironment):
-    """Production EQLBPW environment with the same stochastic reward process.
+class StochasticOverestimationEQLBPWEnvironment(_RewardMatrixMixin, EQLBPWEnvironment):
+    """Production EQLBPW environment using the same reward process as QLBPW."""
 
-    The benchmark uses the same normalized reward scale as QLBPW:
-    collision=-1, goal=+1, ordinary movement=0, plus zero-mean Gaussian noise
-    on non-terminal transitions.
-    """
-
-    def __init__(self, *args, reward_std=2.0, rng=None, **kwargs):
-        self.reward_std = float(reward_std)
-        self.rng = rng if rng is not None else np.random.default_rng()
+    def __init__(self, *args, reward_std=2.0, rng=None, reward_matrix=None, **kwargs):
+        self._init_stochastic_rewards(reward_std, rng, reward_matrix)
         super().__init__(*args, **kwargs)
 
     def take_step(self, state, action):
@@ -46,6 +60,6 @@ class StochasticOverestimationEQLBPWEnvironment(EQLBPWEnvironment):
         elif goal:
             reward = 1.0
         else:
-            reward = 0.0 + float(self.rng.normal(0.0, self.reward_std))
+            reward = self._noise(action)
 
         return next_state, reward, terminal, info
