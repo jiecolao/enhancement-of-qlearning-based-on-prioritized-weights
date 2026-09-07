@@ -283,10 +283,10 @@ class EnvironmentTracker:
         summary_text = (
             f"===== EPISODE {curr_ep}/{max_ep} SUMMARY =====\n"
             f"{'Epsilon:':<30}| {epsilon:.3f}\n"
-            f"{f'Steps per {ep_tracker} episode:':<30}| {self.steps_per_ep} / {max_steps*max_ep}\n"
-            f"{f'Rewards per {ep_tracker} episode:':<30}| {self.rewards_per_ep}\n"
+            f"{f'Steps per {ep_tracker} episodes:':<30}| {self.interval_steps} / {max_steps*ep_tracker}\n"
+            f"{f'Rewards per {ep_tracker} episodes:':<30}| {self.interval_reward}\n"
             f"{f'{ep_tracker} Episode Completion Time:':<30}| {elapsed:.2f} seconds\n"
-            f"{'Memory usage:':<30}| Current: {current / (1024 * 1024):.2f} MB, Peak: {peak / (1024 * 1024):.2f} MB\n"
+            f"{'Python Traced Memory:':<30}| Current: {current / (1024 * 1024):.2f} MB, Peak: {peak / (1024 * 1024):.2f} MB\n"
             f"{'Q-table states:':<30}| {len(self.agent.Q)}\n"
             f"{'Q-table value memory:':<30}| "
             f"{sum(v.nbytes for v in self.agent.Q.values()) / (1024 * 1024):.4f} MB\n"
@@ -307,6 +307,8 @@ class EnvironmentTracker:
 
         self.steps_per_ep = 0
         self.rewards_per_ep = 0
+        self.interval_steps = 0
+        self.interval_reward = 0
 
     def print_total_summary(self, start_time):
         elapsed_time = time.time() - start_time

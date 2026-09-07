@@ -339,7 +339,7 @@ class EnvironmentTracker:
             epsilon
         ):
         current, peak = tracemalloc.get_traced_memory()
-        # network_memory, optimizer_memory = self.get_network_memory()
+        network_memory, optimizer_memory = self.get_network_memory()
         success_rate = self.get_success_rate()
         average_path = self.get_average_path_length()
         average_optimality = self.get_average_optimality()
@@ -347,12 +347,12 @@ class EnvironmentTracker:
         summary_text = (
             f"===== EPISODE {curr_ep}/{max_ep} SUMMARY =====\n"
             f"{'Epsilon:':<30}| {epsilon:.3f}\n"
-            f"{f'Steps per {ep_tracker} episode:':<30}| {self.steps_per_ep} / {max_steps*max_ep}\n"
-            f"{f'Rewards per {ep_tracker} episode:':<30}| {self.rewards_per_ep}\n"
+            f"{f'Steps per {ep_tracker} episodes:':<30}| {self.interval_steps} / {max_steps*ep_tracker}\n"
+            f"{f'Rewards per {ep_tracker} episodes:':<30}| {self.interval_reward}\n"
             f"{f'{ep_tracker} Episode Completion Time:':<30}| {elapsed:.2f} seconds\n"
             f"{'Python Traced Memory:':<30}| Current: {current / (1024 * 1024):.2f} MB, Peak: {peak / (1024 * 1024):.2f} MB\n"
-            # f"{'Network Memory:':<30}| {network_memory}\n"
-            # f"{'Optimizer Memory:':<30}| {optimizer_memory}"
+            f"{'Network Memory:':<30}| {network_memory:.2f}\n"
+            f"{'Optimizer Memory:':<30}| {optimizer_memory:.2f}\n"
             f"{'Total Steps:':<30}| {self.steps}\n"
             f"{'Total Obstacles Encountered:':<30}| {self.obstacle_encountered}\n"
             f"{'Total Goals:':<30}| {self.goal_count}\n"
@@ -360,23 +360,18 @@ class EnvironmentTracker:
             f"{' ├── Positive Rewards:':<30}| {self.pos_rewards:.2f}\n"
             f"{' └── Negative Rewards:':<30}| {self.neg_rewards:.2f}\n"
             f"{'Shortest valid path:':<30}| "
-
             f"{self.shortest_path_steps if self.shortest_path_steps is not None else 'No path'}\n"
-
-            f"{'Success rate:':<30}| "
-            f"{success_rate * 100:.2f}%\n"
-
-            f"{'Average path length:':<30}| "
-            f"{average_path:.2f}\n"
-
-            f"{'Average optimality:':<30}| "
-            f"{average_optimality * 100:.2f}%\n"
+            f"{'Success rate:':<30}| {success_rate * 100:.2f}%\n"
+            f"{'Average path length:':<30}| {average_path:.2f}\n"
+            f"{'Average optimality:':<30}| {average_optimality * 100:.2f}%\n"
         )
 
         self._print_and_log(summary_text)
 
         self.steps_per_ep = 0
         self.rewards_per_ep = 0
+        self.interval_steps = 0
+        self.interval_reward = 0
 
     def print_total_summary(self, start_time):
         elapsed_time = time.time() - start_time
