@@ -35,7 +35,6 @@ PRESET_ENVIRONMENTS = [
     },
     {   # 2
         'name': 'Optimality Test',
-        'name': 'Intramuros (20x20)',
         'grid_size': 20,
         'start_state': (0, 0),
         'end_state': (6, 6),
