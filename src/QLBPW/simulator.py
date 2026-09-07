@@ -110,9 +110,9 @@ def simulate():
                 epsilon=agent.e
             )
             interval_start_time = time.time()
+            env.tracker.print_learned_path()    # Tracker
 
-        if episode_number % 100 == 0:
-            # env.tracker.print_learned_path()    # Tracker
+        if env.is_dynamic_obs and episode_number % 10 == 0:
             env.generate_obstacles()            # Dynamic Obstacle
 
     return agent, env
