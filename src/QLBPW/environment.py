@@ -33,7 +33,7 @@ class Environment:
 
         self.agent_pos = start_state
         self.steps = 0
-        self.max_steps = self.grid_cols * self.grid_cols ** 2
+        self.max_steps = self.grid_cols * self.grid_cols 
         self.tracker = EnvironmentTracker(
             agent=agent,
             env=self
