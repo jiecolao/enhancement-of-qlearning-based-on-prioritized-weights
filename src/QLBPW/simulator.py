@@ -13,9 +13,6 @@ def simulate():
         gamma=0.9, 
         beta=0.3,
         e=0.9, 
-        e_min=0.1, 
-        e_decay=0.998,        
-        no_of_states=4, 
         no_of_actions=4,
         max_buffer=2000,
         batch_size=20, 
@@ -28,15 +25,16 @@ def simulate():
         start_state=environment["start_state"]["fort_santiago"],
         end_state=environment["end_state"]["enter_exit4"],
         agent=agent,
-        episodes=2000,
+        episodes=200,
         ep_tracker=10,
-        no_of_obstacles=3,
+        no_of_obstacles=0,
         static_obstacles=environment["obstacles"],
-        is_dynamic_obs=True
+        is_dynamic_obs=False
     )
 
     env.generate_obstacles()
     env.tracker.print_live_grid(env.agent_pos)
+    interval_start_time = time.time()
 
     for ep in range(env.episodes):
         episode_number = ep + 1
@@ -45,9 +43,6 @@ def simulate():
         env.tracker.steps_per_ep = 0
         env.tracker.rewards_per_ep = 0
         is_terminal = False
-
-        if episode_number % env.ep_tracker == 0:
-            episode_start_time = time.time()
 
         while not is_terminal and env.tracker.steps_per_ep < env.max_steps:
             action = agent.epsilon_greedy(env.agent_pos)
@@ -105,7 +100,7 @@ def simulate():
         )
 
         if episode_number % env.ep_tracker == 0:
-            elapsed = time.time() - episode_start_time
+            elapsed = time.time() - interval_start_time
             env.tracker.print_episode_summary(
             curr_ep=episode_number, 
                 max_ep=env.episodes, 
@@ -114,8 +109,9 @@ def simulate():
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
+            interval_start_time = time.time()
 
-        if episode_number % 10 == 0:
+        if episode_number % 100 == 0:
             # env.tracker.print_learned_path()    # Tracker
             env.generate_obstacles()            # Dynamic Obstacle
 

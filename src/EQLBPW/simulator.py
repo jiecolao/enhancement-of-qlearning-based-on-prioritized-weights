@@ -45,15 +45,15 @@ def simulate():
     )
 
     environment = PRESET_ENVIRONMENTS[1]
-    episodes = 2000
+    episodes = 200
     ep_tracker = 10
-    no_of_obstacles = 5
-    is_dynamic_obs = True
+    no_of_obstacles = 0
+    is_dynamic_obs = False
 
     env = Environment(
         grid=environment["grid_size"],
-        start_state=environment["start_state"],
-        end_state=environment["end_state"],
+        start_state=environment["start_state"]["fort_santiago"],
+        end_state=environment["end_state"]["enter_exit4"],
         agent=agent,
         episodes=episodes,
         ep_tracker=ep_tracker,
@@ -64,16 +64,15 @@ def simulate():
 
     env.generate_obstacles()                            # Initialize obstacles
     env.tracker.print_live_grid(env.agent_pos)          # Display Grid in Terminal 
+    interval_start_time = time.time()
 
     for ep in range(env.episodes):
         state = env.reset()
+        env.tracker.steps_per_ep = 0
+        env.tracker.rewards_per_ep = 0
         is_terminal = False
 
         episode_number = ep + 1
-
-        # Tracker
-        if episode_number % env.ep_tracker == 0:
-            episode_start_time = time.time()
 
         while not is_terminal and env.tracker.steps_per_ep < env.max_steps:
             action = agent.e_greedy(state)
@@ -125,7 +124,7 @@ def simulate():
 
         # Tracker
         if episode_number % env.ep_tracker == 0:
-            elapsed = time.time() - episode_start_time
+            elapsed = time.time() - interval_start_time
             env.tracker.record_episode(success = is_terminal and env.agent_pos == env.end_state)
             env.tracker.print_episode_summary(
                 curr_ep=episode_number,
@@ -135,6 +134,7 @@ def simulate():
                 max_steps=env.max_steps,
                 epsilon=agent.e
             )
+            interval_start_time = time.time()
         else: 
             env.tracker.record_episode(success=is_terminal and env.agent_pos == env.end_state)
 
