@@ -1,209 +1,296 @@
+"""Controlled stochastic overestimation benchmark.
+
+Run from repository root with:
+    python -m src.overestimation_benchmark
+
+This runner imports the production QLBPW/EQLBPW agents and production-based
+benchmark environments. It does not replace either learning algorithm.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+from datetime import datetime
+from pathlib import Path
 import random
 
+import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import streamlit as st
 import torch
 
-from EQLBPW.agent import Agent as EQLBPWAgent
-
-
-st.set_page_config(page_title="Overestimation Benchmark", layout="wide")
-st.title("QLBPW vs EQLBPW: Controlled Overestimation Test")
-st.caption("A stochastic two-stage MDP with a known true value, designed to expose max-Q overestimation.")
-
-STATE_DIM = 29
-ACTION_DIM = 4
-ROOT = np.zeros(STATE_DIM, dtype=np.float32)
-DECISION = np.zeros(STATE_DIM, dtype=np.float32)
-ROOT[0] = 1.0
-DECISION[1] = 1.0
-
-
-def train_qlbpw(reward_matrix, alpha, gamma, epsilon):
-    """Clean tabular Q-learning baseline for the overestimation experiment."""
-    q_root = np.zeros(ACTION_DIM)
-    q_decision = np.zeros(ACTION_DIM)
-
-    for rewards in reward_matrix:
-        root_action = random.randrange(ACTION_DIM) if random.random() < epsilon else int(np.argmax(q_root))
-        q_root[root_action] += alpha * (gamma * np.max(q_decision) - q_root[root_action])
-
-        decision_action = random.randrange(ACTION_DIM) if random.random() < epsilon else int(np.argmax(q_decision))
-        q_decision[decision_action] += alpha * (float(rewards[decision_action]) - q_decision[decision_action])
-
-    return q_root
-
-
-def train_eqlbpw(reward_matrix, learning_rate, gamma, batch_size, target_sync, priority_alpha, beta_start, beta_end):
-    """Train the repository's actual EQLBPW Double-DQN agent on the same MDP."""
-    agent = EQLBPWAgent(
-        state_dim=STATE_DIM,
-        action_dim=ACTION_DIM,
-        learning_rate=learning_rate,
-        gamma=gamma,
-        priority_alpha=priority_alpha,
-        beta_start=beta_start,
-        beta_end=beta_end,
-        e=1.0,
-        e_min=0.05,
-        e_decay=0.995,
-        max_buffer=max(5000, batch_size * 20),
-        batch_size=batch_size,
-        target_sync_freq=target_sync,
-        collision_weight=0.0,
-        goal_weight=0.0,
-        distance_weight=0.0,
-    )
-
-    terminal = np.zeros(STATE_DIM, dtype=np.float32)
-
-    for episode, rewards in enumerate(reward_matrix):
-        root_action = agent.e_greedy(ROOT)
-        agent.memory.push(ROOT, root_action, 0.0, DECISION, False, 0.0, 0.0, 0.0)
-        agent.update()
-
-        decision_action = agent.e_greedy(DECISION)
-        reward = float(rewards[decision_action])
-        agent.memory.push(DECISION, decision_action, reward, terminal, True, 0.0, 0.0, 0.0)
-        agent.update()
-
-        progress = episode / max(len(reward_matrix) - 1, 1)
-        agent.update_beta(progress)
-        agent.decay_e()
-        if (episode + 1) % target_sync == 0:
-            agent.sync_target()
-
-    with torch.no_grad():
-        root_q = agent.main_net(torch.as_tensor(ROOT).unsqueeze(0)).squeeze(0).cpu().numpy()
-    return root_q
-
-
-def run(seeds, episodes, reward_mean, reward_std, alpha, gamma, epsilon, learning_rate,
-        batch_size, target_sync, priority_alpha, beta_start, beta_end):
-    true_value = gamma * reward_mean
-    rows = []
-
-    for seed in seeds:
-        rng = np.random.default_rng(seed)
-        # Same reward samples are supplied to both algorithms for a fair comparison.
-        reward_matrix = rng.normal(reward_mean, reward_std, (episodes, ACTION_DIM))
-
-        random.seed(seed)
-        np.random.seed(seed)
-        q_root = train_qlbpw(reward_matrix, alpha, gamma, epsilon)
-
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        e_root = train_eqlbpw(
-            reward_matrix, learning_rate, gamma, batch_size, target_sync,
-            priority_alpha, beta_start, beta_end
-        )
-
-        for algorithm, q_values in [("QLBPW", q_root), ("EQLBPW", e_root)]:
-            estimate = float(np.max(q_values))
-            rows.append({
-                "Seed": seed,
-                "Algorithm": algorithm,
-                "True value": true_value,
-                "Estimated max Q": estimate,
-                "Bias": estimate - true_value,
-                "Positive overestimation": max(estimate - true_value, 0.0),
-            })
-
-    return pd.DataFrame(rows), true_value
-
-
-st.markdown(
-    """
-### How this test works
-
-- **State 0:** the agent moves to State 1 with zero reward.
-- **State 1:** the agent chooses one of four actions.
-- Each action gives a noisy reward with a **known expected value**.
-- All four actions have the same expected reward, so the true value is known exactly:
-  `V* = gamma × reward_mean`.
-- Standard Q-learning uses `max Q` when backing up State 0.
-- EQLBPW uses your Double-DQN target: the main network selects the action and the target network evaluates it.
-
-This isolates the max-Q overestimation mechanism instead of mixing it with path-planning success/failure.
-"""
+from .EQLBPW.agent import Agent as EQLBPWAgent
+from .EQLBPW.tracker import EnvironmentTracker as EQLBPWTracker
+from .QLBPW.agent import Agent as QLBPWAgent
+from .QLBPW.tracker import EnvironmentTracker as QLBPWTracker
+from .overestimation_environment import (
+    StochasticOverestimationEQLBPWEnvironment,
+    StochasticOverestimationQLBPWEnvironment,
 )
 
-c1, c2, c3 = st.columns(3)
-with c1:
-    episodes = st.number_input("Training episodes", 200, 10000, 3000, step=100)
-    seeds_count = st.number_input("Random seeds", 3, 30, 10, step=1)
-with c2:
-    reward_mean = st.number_input("True reward mean", -1.0, 1.0, 0.0, step=0.1)
-    reward_std = st.number_input("Reward noise (std)", 0.1, 5.0, 2.0, step=0.1)
-with c3:
-    gamma = st.number_input("Discount factor", 0.5, 0.99, 0.95, step=0.01)
-    base_seed = st.number_input("Starting seed", 0, 999999, 42)
+GAMMA = 0.95
+ACTIONS = 4
+ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_DIR = ROOT / "compare_figures" / "overestimation"
 
-with st.expander("Advanced parameters"):
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        alpha = st.number_input("QLBPW learning rate", 0.01, 1.0, 0.1, step=0.01)
-    with c2:
-        epsilon = st.number_input("QLBPW epsilon", 0.0, 1.0, 0.1, step=0.05)
-    with c3:
-        learning_rate = st.number_input("EQLBPW learning rate", 0.00001, 0.01, 0.0005, format="%.5f")
-    with c4:
-        batch_size = st.number_input("EQLBPW batch size", 8, 128, 32, step=8)
-    c5, c6, c7 = st.columns(3)
-    with c5:
-        target_sync = st.number_input("Target sync frequency", 1, 500, 20, step=1)
-    with c6:
-        priority_alpha = st.number_input("Priority alpha", 0.0, 1.0, 0.6, step=0.1)
-    with c7:
-        beta_start = st.number_input("Beta start", 0.0, 1.0, 0.4, step=0.1)
-        beta_end = st.number_input("Beta end", 0.0, 1.0, 1.0, step=0.1)
 
-st.info("Positive Bias = overestimation. The true value is known analytically, so we do not use an agent's own trajectory as ground truth.")
+def make_agents():
+    q = QLBPWAgent(
+        alpha=0.1, gamma=GAMMA, beta=0.3, e=0.9,
+        no_of_actions=ACTIONS, max_buffer=200, batch_size=2000,
+    )
+    # These are the same production EQLBPW components: DQN, prioritized
+    # replay, importance sampling, target network, and Double-DQN update.
+    e = EQLBPWAgent(
+        state_dim=29, action_dim=ACTIONS, learning_rate=0.0005,
+        gamma=GAMMA, priority_alpha=0.6, beta_start=0.4, beta_end=1.0,
+        e=1.0, e_min=0.05, e_decay=0.995,
+        max_buffer=5000, batch_size=32, target_sync_freq=20,
+        collision_weight=1.0, goal_weight=2.0, distance_weight=0.5,
+    )
+    # The production QLBPW tracker expects these legacy fields although the
+    # current agent constructor does not initialize them.
+    q.e_min = q.e
+    q.e_decay = 1.0
+    return q, e
 
-if st.button("Run stochastic benchmark", type="primary", use_container_width=True):
-    seeds = [int(base_seed) + i for i in range(int(seeds_count))]
-    with st.spinner(f"Running {len(seeds)} seeds × {int(episodes)} episodes..."):
-        results, true_value = run(
-            seeds, int(episodes), float(reward_mean), float(reward_std),
-            float(alpha), float(gamma), float(epsilon), float(learning_rate),
-            int(batch_size), int(target_sync), float(priority_alpha),
-            float(beta_start), float(beta_end)
-        )
 
-    summary = results.groupby("Algorithm").agg(
-        True_value=("True value", "mean"),
-        Estimated_max_Q=("Estimated max Q", "mean"),
-        Estimated_Q_std=("Estimated max Q", "std"),
-        Mean_bias=("Bias", "mean"),
-        Bias_std=("Bias", "std"),
-        Mean_positive_overestimation=("Positive overestimation", "mean"),
-    ).reset_index()
+def make_envs(q_agent, e_agent, reward_std, seed, episodes):
+    common = dict(
+        grid=2, start_state=(0, 0), end_state=(1, 1), episodes=episodes,
+        ep_tracker=max(1, episodes // 10), no_of_obstacles=0,
+        static_obstacles=[], is_dynamic_obs=False,
+    )
+    q_env = StochasticOverestimationQLBPWEnvironment(
+        agent=q_agent, reward_std=reward_std,
+        rng=np.random.default_rng(np.random.SeedSequence([seed, 101])), **common,
+    )
+    e_env = StochasticOverestimationEQLBPWEnvironment(
+        agent=e_agent, reward_std=reward_std,
+        rng=np.random.default_rng(np.random.SeedSequence([seed, 202])), **common,
+    )
+    q_env.generate_obstacles()
+    e_env.generate_obstacles()
+    return q_env, e_env
 
-    st.subheader("Estimated max Q vs true value")
-    st.bar_chart(summary.set_index("Algorithm")[["True_value", "Estimated_max_Q"]])
 
-    st.subheader("Overestimation bias")
-    st.bar_chart(summary.set_index("Algorithm")[["Mean_bias"]])
+def expected_model(env):
+    """Return the exact expected optimal Q table; noise has zero expectation."""
+    states = [(x, y) for y in range(env.grid_rows) for x in range(env.grid_cols)
+              if (x, y) != env.end_state]
+    index = {s: i for i, s in enumerate(states)}
+    q = np.zeros((len(states), ACTIONS), dtype=float)
+    for _ in range(10000):
+        new = np.zeros_like(q)
+        for state, i in index.items():
+            for action in range(ACTIONS):
+                dx, dy = ((0, -1), (1, 0), (0, 1), (-1, 0))[action]
+                attempted = (min(max(state[0] + dx, 0), env.grid_cols - 1),
+                             min(max(state[1] + dy, 0), env.grid_rows - 1))
+                nxt = state if attempted in env.obstacles else attempted
+                done = nxt == env.end_state
+                expected_reward = 1.0 if done else (-1.0 if nxt in env.obstacles else 0.0)
+                new[i, action] = expected_reward + (0.0 if done else GAMMA * q[index[nxt]].max())
+        if np.max(np.abs(new - q)) < 1e-12:
+            return states, new
+        q = new
+    raise RuntimeError("Expected-value iteration did not converge")
 
-    display = summary.rename(columns={
-        "True_value": "True value",
-        "Estimated_max_Q": "Estimated max Q",
-        "Estimated_Q_std": "Estimated Q std",
-        "Mean_bias": "Mean bias",
-        "Bias_std": "Bias std",
-        "Mean_positive_overestimation": "Mean positive overestimation",
-    }).round(4)
-    st.subheader("Summary across seeds")
-    st.dataframe(display, use_container_width=True, hide_index=True)
 
-    q_bias = float(summary.loc[summary.Algorithm == "QLBPW", "Mean_bias"].iloc[0])
-    e_bias = float(summary.loc[summary.Algorithm == "EQLBPW", "Mean_bias"].iloc[0])
-    if e_bias < q_bias:
-        st.success(f"EQLBPW has lower mean bias ({e_bias:.4f}) than QLBPW ({q_bias:.4f}) in this controlled test.")
+def learned_q(agent, env, algorithm, states):
+    if algorithm == "QLBPW":
+        return np.asarray([agent.Q.get(s, np.zeros(ACTIONS)) for s in states], dtype=float)
+    original = env.agent_pos
+    features = []
+    for state in states:
+        env.agent_pos = state
+        features.append(env.get_state())
+    env.agent_pos = original
+    with torch.no_grad():
+        return agent.main_net(torch.as_tensor(np.asarray(features), dtype=torch.float32)).cpu().numpy()
+
+
+def train_one(seed, episodes, reward_std, algorithm, checkpoints=100):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    q_agent, e_agent = make_agents()
+    q_env, e_env = make_envs(q_agent, e_agent, reward_std, seed, episodes)
+    agent, env = (q_agent, q_env) if algorithm == "QLBPW" else (e_agent, e_env)
+    tracker = QLBPWTracker(agent, env) if algorithm == "QLBPW" else EQLBPWTracker(agent, env)
+    states, truth = expected_model(env)
+    start_i = states.index(env.start_state)
+    history = []
+    interval = max(1, episodes // checkpoints)
+
+    for episode in range(1, episodes + 1):
+        state = env.start_state
+        env.agent_pos = state
+        done = False
+        steps = 0
+        total_reward = 0.0
+
+        while not done and steps < env.max_steps:
+            if algorithm == "QLBPW":
+                action = int(agent.epsilon_greedy(state))
+                next_state, reward, done = env.take_step(state, action)
+                current = agent.Q.get(state, np.zeros(ACTIONS))[action]
+                next_max = 0.0 if done else agent.Q.get(next_state, np.zeros(ACTIONS)).max()
+                td_error = reward + GAMMA * next_max - current
+                agent.memory.push(state, action, reward, next_state, td_error)
+                sample = agent.adjust_lr()
+                agent.update_Q(*sample, end_state=env.end_state, obstacles=env.obstacles)
+            else:
+                env.agent_pos = state
+                current_features = env.get_state()
+                action = agent.e_greedy(current_features)
+                next_state, reward, done, info = env.take_step(state, action)
+                next_features = env.get_state()
+                agent.memory.push(
+                    current_features, action, reward, next_features, done,
+                    float(info.get("collision", False)), float(info.get("goal", False)),
+                    float(info.get("distance_progress", 0.0)),
+                )
+                agent.update()
+            state = next_state
+            total_reward += reward
+            steps += 1
+
+        if algorithm == "EQLBPW":
+            agent.decay_e()
+            if episode % agent.target_sync_freq == 0:
+                agent.sync_target()
+
+        tracker.steps_per_ep = steps
+        tracker.rewards_per_ep = total_reward
+        tracker.record_episode(done)
+
+        if episode % interval == 0 or episode == episodes:
+            q = learned_q(agent, env, algorithm, states)
+            bias = float(q[start_i].max() - truth[start_i].max())
+            history.append((episode, bias, float(q[start_i].max())))
+
+    q = learned_q(agent, env, algorithm, states)
+    start_bias = float(q[start_i].max() - truth[start_i].max())
+    return {
+        "seed": seed, "algorithm": algorithm, "history": history,
+        "bias": start_bias, "estimated_q": float(q[start_i].max()),
+        "true_q": float(truth[start_i].max()),
+        "positive_overestimation": max(start_bias, 0.0),
+        "success_rate": tracker.get_success_rate(),
+    }
+
+
+def summarize(results):
+    summary = {}
+    for algorithm in ("QLBPW", "EQLBPW"):
+        rows = [r for r in results if r["algorithm"] == algorithm]
+        bias = np.asarray([r["bias"] for r in rows], dtype=float)
+        estimate = np.asarray([r["estimated_q"] for r in rows], dtype=float)
+        positive = np.maximum(bias, 0.0)
+        summary[algorithm] = {
+            "true_q": float(np.mean([r["true_q"] for r in rows])),
+            "estimated_q": float(estimate.mean()),
+            "estimated_q_std": float(estimate.std(ddof=1)) if len(estimate) > 1 else 0.0,
+            "mean_bias": float(bias.mean()),
+            "bias_std": float(bias.std(ddof=1)) if len(bias) > 1 else 0.0,
+            "positive_overestimation": float(positive.mean()),
+            "positive_overestimation_std": float(positive.std(ddof=1)) if len(positive) > 1 else 0.0,
+        }
+    return summary
+
+
+def plot_results(results, summary, save=True, show=True):
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    algorithms = ["QLBPW", "EQLBPW"]
+    x = np.arange(len(algorithms))
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    means = [summary[a]["mean_bias"] for a in algorithms]
+    errors = [summary[a]["bias_std"] for a in algorithms]
+    ax.bar(x, means, yerr=errors, capsize=5)
+    ax.axhline(0.0, linewidth=1)
+    ax.set_xticks(x, algorithms)
+    ax.set_ylabel("Mean Q-value bias")
+    ax.set_title("Overestimation Bias: QLBPW vs EQLBPW")
+    ax.grid(True, axis="y", linestyle="--", alpha=0.5)
+    fig.tight_layout()
+    if save:
+        fig.savefig(OUTPUT_DIR / f"overestimation_bias_{timestamp}.png", dpi=150, bbox_inches="tight")
+    if show:
+        plt.show()
     else:
-        st.warning(f"This run does not show lower EQLBPW bias: QLBPW={q_bias:.4f}, EQLBPW={e_bias:.4f}. Increase seeds/episodes or reward noise before drawing a conclusion.")
+        plt.close(fig)
 
-    st.caption(f"Ground-truth value = {true_value:.4f}. Report mean ± standard deviation across seeds in the thesis.")
+    fig, ax = plt.subplots(figsize=(8, 5))
+    width = 0.35
+    truth = [summary[a]["true_q"] for a in algorithms]
+    estimate = [summary[a]["estimated_q"] for a in algorithms]
+    ax.bar(x - width / 2, truth, width, label="True max Q")
+    ax.bar(x + width / 2, estimate, width, label="Learned max Q")
+    ax.set_xticks(x, algorithms)
+    ax.set_ylabel("Q-value")
+    ax.set_title("True vs Learned Maximum Q-value")
+    ax.legend()
+    ax.grid(True, axis="y", linestyle="--", alpha=0.5)
+    fig.tight_layout()
+    if save:
+        fig.savefig(OUTPUT_DIR / f"true_vs_learned_q_{timestamp}.png", dpi=150, bbox_inches="tight")
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def save_csv(results, summary):
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    path = OUTPUT_DIR / f"overestimation_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["algorithm", "seed", "true_q", "estimated_q", "bias", "positive_overestimation", "success_rate"])
+        for r in results:
+            writer.writerow([r["algorithm"], r["seed"], r["true_q"], r["estimated_q"], r["bias"], r["positive_overestimation"], r["success_rate"]])
+        writer.writerow([])
+        writer.writerow(["algorithm", "true_q", "estimated_q", "estimated_q_std", "mean_bias", "bias_std", "positive_overestimation", "positive_overestimation_std"])
+        for a in summary:
+            writer.writerow([a, *summary[a].values()])
+    return path
+
+
+def run(seeds, episodes, reward_std, show=True):
+    results = []
+    for seed in seeds:
+        for algorithm in ("QLBPW", "EQLBPW"):
+            print(f"Running {algorithm}: seed={seed}, episodes={episodes}")
+            result = train_one(seed, episodes, reward_std, algorithm)
+            results.append(result)
+            print(f"  true={result['true_q']:.6f} estimated={result['estimated_q']:.6f} bias={result['bias']:.6f}")
+
+    summary = summarize(results)
+    csv_path = save_csv(results, summary)
+    plot_results(results, summary, show=show)
+    print("\nSummary")
+    for algorithm, values in summary.items():
+        print(
+            f"{algorithm}: estimated={values['estimated_q']:.6f} +/- {values['estimated_q_std']:.6f}, "
+            f"bias={values['mean_bias']:.6f} +/- {values['bias_std']:.6f}, "
+            f"positive overestimation={values['positive_overestimation']:.6f}"
+        )
+    print(f"Results saved to {csv_path}")
+    return results, summary
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--episodes", type=int, default=3000)
+    parser.add_argument("--seeds", type=int, default=10)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--reward-std", type=float, default=2.0)
+    parser.add_argument("--no-show", action="store_true")
+    args = parser.parse_args()
+    run([args.seed + i for i in range(args.seeds)], args.episodes, args.reward_std, show=not args.no_show)
+
+
+if __name__ == "__main__":
+    main()
