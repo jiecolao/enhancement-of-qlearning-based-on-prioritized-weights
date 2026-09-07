@@ -5,7 +5,7 @@ from .visualizer import Visualizer
 import time
 import tracemalloc
 
-def simulate(grid_size=None, episodes=100, preset=None):
+def simulate(grid_size=None, episodes=1000, preset=None):
 
     state_dim = 29
     learning_rate = 0.0005
@@ -18,7 +18,7 @@ def simulate(grid_size=None, episodes=100, preset=None):
     e_decay = 0.995
     no_of_actions = 4
     batch_size = 64
-    max_buffer = 50000
+    max_buffer = 2000
     target_sync_freq = 20
 
     collision_weight = 1.0
@@ -151,6 +151,7 @@ def simulate(grid_size=None, episodes=100, preset=None):
         if env.is_dynamic_obs and episode_number % 10 == 0:
             env.generate_obstacles()            # Dynamic Obstacle
 
+    trained_env.tracker.print_total_summary(start_time=start_time)
     return agent, env
 
 if __name__ == "__main__":

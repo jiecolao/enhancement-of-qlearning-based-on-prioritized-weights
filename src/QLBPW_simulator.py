@@ -6,7 +6,7 @@ import tracemalloc
 import numpy as np
 import time
 
-def simulate(grid_size=None, episodes=100, preset=None):
+def simulate(grid_size=None, episodes=1000, preset=None):
 
     agent = Agent(
         alpha=0.1, 
@@ -14,8 +14,8 @@ def simulate(grid_size=None, episodes=100, preset=None):
         beta=0.3,
         e=0.9,
         no_of_actions=4,
-        max_buffer=20,
-        batch_size=2000, 
+        max_buffer=2000,
+        batch_size=20, 
     )
     
     if preset is None:
@@ -136,6 +136,7 @@ def simulate(grid_size=None, episodes=100, preset=None):
         if env.is_dynamic_obs and episode_number % 10 == 0:
             env.generate_obstacles()            # Dynamic Obstacle
 
+    trained_env.tracker.print_total_summary(start_time=start_time)
     return agent, env
 
 
