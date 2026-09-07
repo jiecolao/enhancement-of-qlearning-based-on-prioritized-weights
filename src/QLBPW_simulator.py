@@ -135,8 +135,8 @@ def simulate(grid_size=None, episodes=1000, preset=None):
 
         if env.is_dynamic_obs and episode_number % 10 == 0:
             env.generate_obstacles()            # Dynamic Obstacle
-
-    trained_env.tracker.print_total_summary(start_time=start_time)
+    
+    env.tracker.print_total_summary(start_time=start_time)
     return agent, env
 
 
