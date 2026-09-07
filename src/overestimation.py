@@ -19,9 +19,6 @@ st.caption(
 )
 
 
-# The two project environments use different reward magnitudes.  For this
-# experiment both algorithms are trained/evaluated with the same normalized
-# reward semantics so that their Q-values are comparable.
 def comparison_reward_qlbpw(next_state, state, terminal):
     if terminal:
         return 1.0
@@ -81,7 +78,7 @@ def build_qlbpw(preset, episodes, alpha, gamma, epsilon, dynamic, dynamic_count)
         while not terminal and steps < env.max_steps:
             state = env.agent_pos
             action = agent.epsilon_greedy(state)
-            next_state, raw_reward, terminal = env.take_step(state, action)
+            next_state, _, terminal = env.take_step(state, action)
             reward = comparison_reward_qlbpw(next_state, state, terminal)
 
             if state not in agent.Q:
@@ -225,6 +222,7 @@ def evaluate_qlbpw(agent, env, trials, gamma, dynamic):
                 "actual": actual,
                 "bias": estimated - actual,
                 "overestimated": estimated > actual,
+                "success": terminal and state != env.start_state,
             }
         )
 
@@ -276,6 +274,7 @@ def evaluate_eqlbpw(agent, env, trials, gamma, dynamic):
                         "actual": actual,
                         "bias": estimated - actual,
                         "overestimated": estimated > actual,
+                        "success": terminal,
                     }
                 )
     finally:
@@ -287,7 +286,8 @@ def evaluate_eqlbpw(agent, env, trials, gamma, dynamic):
 preset_name = st.selectbox(
     "Environment preset",
     [p["name"] for p in PRESET_ENVIRONMENTS],
-    index=1,
+    index=2,
+    help="Optimality Test is the default because it gives both algorithms a simple environment in which the start-state value can be learned reliably."
 )
 preset = resolve_preset(
     next(p for p in PRESET_ENVIRONMENTS if p["name"] == preset_name)
@@ -295,8 +295,8 @@ preset = resolve_preset(
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    episodes = st.number_input("Training episodes", 10, 5000, 500, step=50)
-    trials = st.number_input("Evaluation trials", 1, 200, 30, step=5)
+    episodes = st.number_input("Training episodes", 10, 5000, 2000, step=50)
+    trials = st.number_input("Evaluation trials", 1, 200, 50, step=5)
 with col2:
     dynamic = st.checkbox("Dynamic obstacles", value=False)
     dynamic_count = st.number_input(
@@ -373,6 +373,10 @@ if st.button("Run comparison", type="primary", use_container_width=True):
                 100 * q_results.overestimated.mean(),
                 100 * e_results.overestimated.mean(),
             ],
+            "Success rate (%)": [
+                100 * q_results.success.mean(),
+                100 * e_results.success.mean(),
+            ],
         }
     )
 
@@ -404,6 +408,13 @@ if st.button("Run comparison", type="primary", use_container_width=True):
             else "QLBPW bias is approximately zero"
         ),
     )
+
+    if q_results.success.mean() == 0:
+        st.warning(
+            "QLBPW did not reach the goal in any evaluation trial. A 0 Q-value / 0 return "
+            "in this case indicates insufficient learning, not absence of overestimation. "
+            "Use a simpler preset or increase training episodes before interpreting the bias comparison."
+        )
 
     st.caption(
         "For a thesis claim, repeat the experiment across multiple random seeds and "
