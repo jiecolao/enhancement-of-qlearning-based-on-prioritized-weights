@@ -2,6 +2,7 @@
 
 Run from repository root with:
     python -m src.overestimation_benchmark
+    python -m src.overestimation_benchmark --episodes 1000 --seeds 10
 
 This runner imports the production QLBPW/EQLBPW agents and production-based
 benchmark environments. It does not replace either learning algorithm.
