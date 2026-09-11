@@ -537,6 +537,33 @@ class Visualizer:
 
         plt.show()
 
+    def plot_epsilon(self, QLBPW_e, EQBLPW_e, episodes):
+        plt.figure(figsize=(8, 4))
+        plt.plot(
+            episodes,
+            QLBPW_e,
+            label="QLBPW",
+            # linestyle="--",
+            color="gray",
+            linewidth=2,
+        )
+        plt.plot(
+            episodes,
+            EQBLPW_e,
+            label="EQBLPW",
+            color="#1f77b4",
+            linewidth=2,
+        )
+
+        plt.title("Exploration Rate of QLBPW vs. EQLBPW")
+        plt.xlabel("Episode")
+        plt.ylabel("Epsilon ($\epsilon$)")
+        plt.ylim(0, 1.05)
+        plt.grid(True, linestyle=":", alpha=0.6)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
 if __name__=="__main__":
     vis = Visualizer(None, None)
 
