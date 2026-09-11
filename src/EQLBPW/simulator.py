@@ -1,66 +1,11 @@
 from .environment import Environment
 from .agent import Agent
-from ..env_settings import PRESET_ENVIRONMENTS
 from ..visualizer import Visualizer
+from dataclasses import asdict
 import time
 import tracemalloc
 
-def simulate():
-
-    state_dim = 29
-    learning_rate = 0.0005
-    gamma = 0.95
-    priority_alpha = 0.6
-    beta_start = 0.4
-    beta_end = 1.0
-    e = 1.0
-    e_min = 0.05
-    e_decay = 0.995
-    no_of_actions = 4
-    batch_size = 64
-    max_buffer = 2000
-    target_sync_freq = 20
-
-    collision_weight = 1.0
-    goal_weight = 2.0
-    distance_weight = 0.5
-
-    agent = Agent(
-        state_dim=state_dim,
-        action_dim=no_of_actions,
-        learning_rate=learning_rate,
-        gamma=gamma,
-        priority_alpha=priority_alpha,
-        beta_start=beta_start,
-        beta_end=beta_end,
-        e=e,
-        e_min=e_min,
-        e_decay=e_decay,
-        max_buffer=max_buffer,
-        batch_size=batch_size,
-        target_sync_freq=target_sync_freq,
-        collision_weight=collision_weight,
-        goal_weight=goal_weight,
-        distance_weight=distance_weight,
-    )
-
-    environment = PRESET_ENVIRONMENTS[1]
-    episodes = 1000
-    ep_tracker = 10
-    no_of_obstacles = 3
-    is_dynamic_obs = True
-
-    env = Environment(
-        grid=environment["grid_size"],
-        start_state=environment["start_state"]["fort_santiago"],
-        end_state=environment["end_state"]["enter_exit4"],
-        agent=agent,
-        episodes=episodes,
-        ep_tracker=ep_tracker,
-        no_of_obstacles=no_of_obstacles,
-        static_obstacles=environment["obstacles"],
-        is_dynamic_obs=is_dynamic_obs,
-    )
+def simulate(agent: Agent, env: Environment):
 
     env.generate_obstacles()                            # Initialize obstacles
     env.tracker.print_live_grid(env.agent_pos)          # Display Grid in Terminal 
@@ -114,7 +59,7 @@ def simulate():
                 if info["goal"]:
                     env.tracker.goal_count += 1
 
-        training_progress = ep / max(episodes - 1, 1)
+        training_progress = ep / max(env.episodes - 1, 1)
         agent.update_beta(training_progress)
 
         agent.decay_e() 
@@ -127,6 +72,8 @@ def simulate():
 
         if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - interval_start_time
+            env.tracker.epsilon_history.append(agent.e)
+            env.tracker.ep_history.append(episode_number)
             env.tracker.print_episode_summary(
                 curr_ep=episode_number,
                 max_ep=env.episodes,
@@ -144,15 +91,21 @@ def simulate():
     return agent, env
 
 if __name__ == "__main__":
+    from ..env_config import Intramuros
+    from ..agent_config import EQLBPWAgent
+
+    agent = Agent(**asdict(EQLBPWAgent()))
+    env = Environment(agent=agent, **asdict(Intramuros()))
+
     print("\n" + "="*40)
     print("EQLBPW Simulation")
     print("="*40)
 
     tracemalloc.start()
     start_time = time.time()
-    trained_agent, trained_env = simulate()
 
-    # trained_env.tracker.print_optimal_path()
+    trained_agent, trained_env = simulate(agent=agent, env=env)
+
     trained_env.tracker.print_total_summary(start_time=start_time)
     trained_agent.save(agent_name="test", save_memory=True)
 

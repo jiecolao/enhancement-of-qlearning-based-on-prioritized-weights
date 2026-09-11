@@ -1,36 +1,12 @@
 from .environment import Environment
 from .agent import Agent
-from ..env_settings import PRESET_ENVIRONMENTS
 from ..visualizer import Visualizer
+from dataclasses import asdict
 import tracemalloc
 import numpy as np
 import time
 
-def simulate():
-
-    agent = Agent(
-        alpha=0.1, 
-        gamma=0.9, 
-        beta=0.3,
-        e=0.9, 
-        no_of_actions=4,
-        max_buffer=2000,
-        batch_size=20, 
-    )
-    
-    environment = PRESET_ENVIRONMENTS[1]
-
-    env = Environment(
-        grid=environment["grid_size"],
-        start_state=environment["start_state"]["fort_santiago"],
-        end_state=environment["end_state"]["enter_exit4"],
-        agent=agent,
-        episodes=1000,
-        ep_tracker=10,
-        no_of_obstacles=3,
-        static_obstacles=environment["obstacles"],
-        is_dynamic_obs=True
-    )
+def simulate(agent: Agent, env: Environment):
 
     env.generate_obstacles()
     env.tracker.print_live_grid(env.agent_pos)
@@ -101,6 +77,8 @@ def simulate():
 
         if episode_number % env.ep_tracker == 0:
             elapsed = time.time() - interval_start_time
+            env.tracker.epsilon_history.append(agent.e)
+            env.tracker.ep_history.append(episode_number)
             env.tracker.print_episode_summary(
             curr_ep=episode_number, 
                 max_ep=env.episodes, 
@@ -119,15 +97,21 @@ def simulate():
 
 
 if __name__ == "__main__":
+    from ..env_config import Intramuros
+    from ..agent_config import QLBPWAgent
+
+    agent = Agent(**asdict(QLBPWAgent()))
+    env = Environment(agent=agent, **asdict(Intramuros()))
+        
     print("\n" + "="*40)
     print("QLBPW Simulation")
     print("="*40)
+
     tracemalloc.start()
     start_time = time.time()
 
-    trained_agent, trained_env = simulate()
+    trained_agent, trained_env = simulate(agent=agent, env=env)
 
-    trained_env.tracker.print_learned_path()
     trained_env.tracker.print_total_summary(start_time=start_time)
     trained_agent.save(agent_name="test", save_memory=True)
 
