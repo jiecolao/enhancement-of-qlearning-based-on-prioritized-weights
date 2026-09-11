@@ -32,6 +32,8 @@ class EnvironmentTracker:
         self.reward_history = []
         self.steps_history = []
         self.optimality_history = []
+        self.epsilon_history = []
+        self.ep_history = []
 
         self.interval_steps = 0
         self.interval_reward = 0
