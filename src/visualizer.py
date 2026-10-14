@@ -400,6 +400,47 @@ class Visualizer:
 
         plt.show()
 
+    def compare_plot_bar(
+        self,
+        categories,
+        series,
+        title="Comparison",
+        xlabel="X Axis",
+        ylabel="Value",
+        save_fig=False,
+    ):
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+
+        num_categories = len(categories)
+        num_series = len(series)
+        
+        # Generate X positions for each category group
+        x_indices = np.arange(num_categories)
+        
+        # Calculate bar width based on how many series are plotted
+        total_group_width = 0.8  # Fraction of space the group takes up
+        bar_width = total_group_width / num_series
+
+        # Plot each series side-by-side with appropriate offsets
+        for idx, (label, values) in enumerate(series.items()):
+            # Shift each bar relative to the center of the category position
+            offset = (idx - (num_series - 1) / 2) * bar_width
+            ax.bar(x_indices + offset, values, width=bar_width, label=label)
+
+        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_xticks(x_indices)
+        ax.set_xticklabels(categories)
+        ax.grid(True, linestyle="--", alpha=0.6, axis="y")  # Grid lines on Y-axis only for bar charts
+        ax.legend()
+        fig.tight_layout()
+
+        if save_fig:
+            self._save_to_eqlbpw(title=title, fig=fig)
+
+        plt.show()
+
     def plot_state_space_qtable_memory(
         self,
         state_counts,
