@@ -7,6 +7,7 @@ import numpy as np
 import time
 
 def simulate(agent: Agent, env: Environment):
+    start_time = time.time()
 
     env.generate_obstacles()
     env.tracker.print_live_grid(env.agent_pos)
@@ -93,6 +94,9 @@ def simulate(agent: Agent, env: Environment):
         if env.is_dynamic_obs and episode_number % 10 == 0:
             env.generate_obstacles()            # Dynamic Obstacle
 
+    env.tracker.print_total_summary(start_time=start_time)
+    agent.save(agent_name="test", save_memory=True)
+
     return agent, env
 
 
@@ -112,8 +116,6 @@ if __name__ == "__main__":
 
     trained_agent, trained_env = simulate(agent=agent, env=env)
 
-    trained_env.tracker.print_total_summary(start_time=start_time)
-    trained_agent.save(agent_name="test", save_memory=True)
 
     # Visuals
     visual = Visualizer(agent=trained_agent, env=trained_env)
