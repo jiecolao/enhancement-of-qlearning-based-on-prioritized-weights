@@ -9,7 +9,7 @@ This repository implements and compares two reinforcement-learning approaches fo
 
 The broader research motivation is to study state-space growth, local-optimum / exploration difficulties, and Q-value overestimation in grid navigation. The project is an experimental research codebase, so preserving scientific validity, comparable evaluation conditions, reproducibility, and honest reporting of results is as important as code quality.
 
-The README describes the work as an extension of Chunlei Wang, Xiao Yang, and He Li's *Improved Q-Learning Applied to Dynamic Obstacle Avoidance and Path Planning* (2022). Treat claims about improvements as hypotheses to evaluate, not guaranteed outcomes.
+The README describes the work as an extension of Chunlei Wang, Xiao Yang, and He Li's _Improved Q-Learning Applied to Dynamic Obstacle Avoidance and Path Planning_ (2022). Treat claims about improvements as hypotheses to evaluate, not guaranteed outcomes.
 
 ## Main goals
 
@@ -36,7 +36,7 @@ When changing this repository, prioritize these goals in order:
 - `src/EQLBPW/environment.py`, `src/EQLBPW/tracker.py`, `src/EQLBPW/simulator.py`: EQLBPW environment interaction, tracking, and simulation.
 - `src/agent_config.py`, `src/env_config.py`, `src/env_settings.py`: agent/environment settings and preset environments.
 - `src/app.py`: Streamlit dashboard that lets users switch between the algorithms.
-- `src/Astar.py`: A* path-planning implementation/reference.
+- `src/Astar.py`: A\* path-planning implementation/reference.
 - `src/compare.py`, `src/compare_overestimation.py`, `src/overestimation.py`, `src/overestimation_benchmark.py`: comparison and overestimation experiments. Inspect imports and each script's actual entry point before assuming they share identical evaluation logic.
 - `src/visualizer.py`: plotting and visualization utilities.
 - `tests/`: regression and experiment-correctness tests, including `tests/test_compare_overestimation.py`.
@@ -44,28 +44,7 @@ When changing this repository, prioritize these goals in order:
 
 The repository contains multiple scripts with similar names and multiple experiment pathways. Do not assume that a benchmark script, dashboard, simulator, and production agent all use exactly the same reward function or settings. Trace the relevant call path before making a change.
 
-## Algorithm concepts and invariants
-
-### QLBPW (tabular baseline)
-
-- States are represented as discrete grid coordinates (typically tuples); the Q-table maps each state to action values.
-- The current implementation's tabular agent stores experiences with TD-error metadata and selects an experience using a rank-based distribution derived from absolute TD errors.
-- Its priority-adjusted learning rate depends on the initial learning rate, replay-buffer size, sampled probability, and `beta`. Preserve the existing implementation's exact formula unless the requested change explicitly targets it.
-- The standard Q-learning target is reward plus discounted maximum next-state Q-value for nonterminal transitions. Terminal transitions must not bootstrap.
-- The tabular baseline is useful as a reference implementation. Do not silently convert it into a neural agent or give it EQLBPW-only features.
-
-### EQLBPW (neural enhanced agent)
-
-- The agent uses a PyTorch feed-forward Q-network with two hidden layers (64 units each, ReLU activations) and one output per action.
-- It maintains a main network and a target network. The target network is initially synchronized with the main network and is periodically synchronized according to the configured target-sync frequency.
-- Action selection uses epsilon-greedy exploration. Epsilon decays toward a configured minimum; do not remove the random-exploration branch or decay floor without a clear reason.
-- Replay transitions include state, action, reward, next state, terminal/done status, and path-related signals (collision, goal, and distance progress).
-- Replay sampling uses priorities raised to `priority_alpha`. Importance-sampling weights are computed from sampling probabilities and `beta`, then normalized in the current implementation.
-- The Double DQN target must select the next action with the **main** network and evaluate that selected action with the **target** network. Do not replace this with the maximum value from the target network; that would change the algorithm and reintroduce the standard DQN target's selection/evaluation coupling.
-- Terminal transitions must use the observed reward as the target, with no discounted next-state bootstrap.
-- The current priority design combines absolute TD error (with a small positive epsilon) and a multiplicative path-aware weight involving collision, goal, and nonnegative distance progress. The corresponding configurable weights are `collision_weight`, `goal_weight`, and `distance_weight`. Preserve the current semantics unless intentionally changing the research method.
-- The current loss is per-sample Smooth L1 / Huber loss and is combined with importance-sampling weights. Keep tensor shapes, device/dtype behavior, and gradient flow correct.
-- `beta` is scheduled between configured start/end values using training progress. If changing the schedule, define clearly whether progress is episode-based or interaction/update-based and test the endpoints.
+# Semantic Rules
 
 ### Environment semantics
 
@@ -108,27 +87,6 @@ The repository contains multiple scripts with similar names and multiple experim
 - If a change alters experiment methodology, update the relevant documentation and make the change visible in result metadata when appropriate.
 - For statistical summaries, report sample counts and uncertainty when supported. Do not interpret a confidence interval as proof of general superiority if the experiment is underpowered or narrowly scoped.
 - Prefer a small smoke test before a long benchmark. Do not launch a large experiment or regenerate many artifacts unless the user asks.
-
-## Testing and verification
-
-Before editing, inspect the relevant implementation and tests. After editing, run the narrowest useful test first, then broaden verification when feasible.
-
-- Main test command: `pytest`
-- Focused comparison tests: `pytest tests/test_compare_overestimation.py`
-- If imports fail depending on the working directory, inspect the current package/import conventions and run from the repository root; do not paper over import problems with unrelated path hacks.
-- For algorithm changes, add tests for at least the relevant cases below:
-  - terminal target has no bootstrap;
-  - Double DQN selects with main network and evaluates with target network;
-  - priority values/probabilities are finite and sampling works with tied or tiny priorities;
-  - importance weights have expected shape and normalization;
-  - path-aware priority reacts correctly to collision, goal, and distance progress;
-  - epsilon and beta schedules reach their expected bounds;
-  - boundary moves, obstacle collisions, goal arrival, and max-step termination remain distinct;
-  - seeded runs remain repeatable;
-  - state feature dimensions match the model input;
-  - checkpoint save/load preserves essential training state.
-- Do not weaken or delete a failing test just to make a change pass. If a test captures outdated intended behavior, explain why and update it alongside the implementation.
-- If you cannot run tests, state that clearly and provide the reason. Never report tests as passing unless they were actually run.
 
 ## Dependency and runtime guidance
 
