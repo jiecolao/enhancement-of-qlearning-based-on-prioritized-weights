@@ -14,3 +14,5 @@ src/**/trained_agents
 src/**/data
 
 .env
+
+compare_figures/*
