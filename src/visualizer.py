@@ -537,17 +537,17 @@ class Visualizer:
 
         plt.show()
 
-    def plot_epsilon(self, QLBPW_e, EQBLPW_e, episodes):
-        plt.figure(figsize=(8, 4))
-        plt.plot(
+    def compare_epsilon(self, QLBPW_e, EQBLPW_e, episodes, save_fig):
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        ax.plot(
             episodes,
             QLBPW_e,
             label="QLBPW",
-            # linestyle="--",
             color="gray",
             linewidth=2,
         )
-        plt.plot(
+        ax.plot(
             episodes,
             EQBLPW_e,
             label="EQBLPW",
@@ -555,13 +555,21 @@ class Visualizer:
             linewidth=2,
         )
 
-        plt.title("Exploration Rate of QLBPW vs. EQLBPW")
-        plt.xlabel("Episode")
-        plt.ylabel("Epsilon ($\epsilon$)")
-        plt.ylim(0, 1.05)
-        plt.grid(True, linestyle=":", alpha=0.6)
-        plt.legend()
-        plt.tight_layout()
+        ax.set_title("Exploration Rate of QLBPW vs. EQLBPW")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Epsilon ($\epsilon$)")
+        ax.set_ylim(0, 1.05)
+        ax.grid(True, linestyle=":", alpha=0.6)
+        ax.legend()
+
+        fig.tight_layout()
+
+        if save_fig:
+            self._save_to_qlbpw(
+                title="state_space_qtable_memory",
+                fig=fig,
+            )
+
         plt.show()
 
 if __name__=="__main__":
