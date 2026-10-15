@@ -349,6 +349,24 @@ def algorithm_page(algorithm: str) -> None:
             terminal = st.empty()
             terminal.code("Training output will appear here when a run starts.", language="text")
 
+    previous_view = st.session_state.get(f"{algorithm}_last_run")
+    if previous_view and previous_view.get("environment") == environment_name and previous_view.get("start") == start and previous_view.get("goal") == goal and not run_clicked:
+        saved_path = previous_view.get("path", [])
+        if saved_path:
+            draw_grid(size, start, goal, static_obstacles, environment_name + " · last learned policy",
+                      path=saved_path, target=map_slot)
+        saved_rewards = previous_view.get("rewards", [])
+        if saved_rewards:
+            from types import SimpleNamespace
+            metrics_obj = SimpleNamespace(
+                reward_history=saved_rewards,
+                success_history=previous_view.get("successes", []),
+                steps_history=previous_view.get("steps", []),
+            )
+            with st.container():
+                st.subheader("Learning progress · last run")
+                render_metrics(metrics_obj, st.empty())
+
     if run_clicked:
         if start == goal:
             st.error("Start and goal must be different states.")
@@ -413,6 +431,8 @@ def algorithm_page(algorithm: str) -> None:
                 st.session_state[f"{algorithm}_last_run"] = {
                     "time": datetime.now().isoformat(timespec="seconds"),
                     "environment": environment_name,
+                    "start": start,
+                    "goal": goal,
                     "episodes": int(episodes),
                     "log": log_capture.getvalue(),
                     "rewards": list(getattr(env.tracker, "reward_history", [])),
