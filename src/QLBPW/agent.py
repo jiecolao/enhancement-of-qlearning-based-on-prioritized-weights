@@ -5,6 +5,12 @@ import pickle
 import random
 import numpy as np
 
+# Original algorithm mapping:
+# I. Initialization and Q-table parameters: Agent.__init__.
+# II.c-d. Rank-based sampling and priority-adjusted learning rate:
+# ReplayBuffer.sample and Agent.adjust_lr.
+# II.e. Tabular Q-value / TD-error update: Agent.update_Q.
+
 
 class ReplayBuffer:
     def __init__(self, max_buffer, batch_size):
@@ -12,9 +18,14 @@ class ReplayBuffer:
         self.batch_size = batch_size
 
     def push(self, state, action, reward, next_state, td_error):
+        # Original II.b: retain (s, a, r, s') and the current TD error for
+        # rank-based sample selection.
         self.buffer.append([state, action, reward, next_state, td_error])
 
     def sample(self):
+        # The original pseudocode describes rank-based sampling in II.c.
+        # QLBPW performs the rank calculation in Agent.adjust_lr rather than
+        # using this uniform helper.
         batch = random.sample(self.buffer, self.batch_size)
         states, actions, rewards, next_states, td_error = zip(*batch)
         return (
@@ -39,6 +50,7 @@ class Agent:
             max_buffer,
             batch_size, 
     ):
+        # Original I.3-I.5: alpha, gamma, beta, and epsilon.
         self.init_alpha = alpha
         self.alpha = alpha              # Learning Rate   
         self.gamma = gamma              # Discount Factor
@@ -48,6 +60,7 @@ class Agent:
 
         self.no_of_actions = no_of_actions
         self.Q = {}
+        # Original I.1: tabular action values are created lazily per state.
 
         self.memory = ReplayBuffer(max_buffer=max_buffer, batch_size=batch_size)
         self.batch_size = batch_size    # The Number of Experiences To Be Sampled
@@ -118,6 +131,8 @@ class Agent:
             end_state,
             obstacles
     ):
+        # Original II.e: update one sampled tabular transition using its
+        # priority-adjusted learning rate.
         if not self.memory.buffer:
             return self.Q
 
@@ -126,6 +141,9 @@ class Agent:
         
         current_q = self.Q[state][action]
         
+        # Original II.e: calculate y_j = r_j + gamma * max_a Q(s'_j, a).
+        # Goal and obstacle transitions are terminal in this implementation,
+        # so they use the immediate reward and do not bootstrap.
         if next_state == end_state or next_state in obstacles:
             td_target = reward
         else:
@@ -136,6 +154,7 @@ class Agent:
         
         new_td_error = td_target - current_q 
         
+        # Original II.e: Q_new <- (1-alpha_j) Q_now + alpha_j y_j.
         self.Q[state][action] = (1 - adjusted_lr) * current_q + (adjusted_lr * td_target)
         
         self.memory.buffer[sampled_idx][4] = float(new_td_error)
@@ -143,6 +162,7 @@ class Agent:
         return self.Q
 
     def epsilon_greedy(self, state):
+        # Original II.a: epsilon-greedy action selection.
         action = random.random()
 
         if action < self.e:
@@ -152,10 +172,13 @@ class Agent:
             return np.argmax(Q_values)
 
     def adjust_lr(self):
+        # Original II.c-d: rank experiences by |TD error|, sample with
+        # P_j proportional to 1/rank(j), then adjust alpha_j using beta.
         b = len(self.memory)
 
         errors = np.array([abs(exp[4]) for exp in self.memory.buffer])
         
+        # Higher absolute TD errors receive better (lower) ranks.
         sorted_indices = np.argsort(-errors)
         ranks = np.empty_like(sorted_indices)
         ranks[sorted_indices] = np.arange(1, b + 1)
@@ -163,10 +186,12 @@ class Agent:
         p_j_unnormalized = 1.0 / ranks
         p_j = p_j_unnormalized / np.sum(p_j_unnormalized)
         
+        # Original II.c: sample one experience from the rank distribution.
         sampled_idx = np.random.choice(b, p=p_j)
         state, action, reward, next_state, td_error = self.memory.buffer[sampled_idx]
         
         p_sampled = p_j[sampled_idx]
+        # Original II.d: alpha_j = alpha / (b * p_j)^beta.
         adjusted_lr = self.init_alpha / ((b * p_sampled) ** self.beta) 
 
         return state, action, reward, next_state, td_error, sampled_idx, adjusted_lr

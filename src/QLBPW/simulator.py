@@ -7,6 +7,8 @@ import numpy as np
 import time
 
 def simulate(agent: Agent, env: Environment):
+    # Original algorithm II: run the episode loop and connect environment
+    # transitions, epsilon-greedy actions, replay, and Q-table updates.
     start_time = time.time()
 
     env.generate_obstacles()
@@ -14,6 +16,7 @@ def simulate(agent: Agent, env: Environment):
     interval_start_time = time.time()
 
     for ep in range(env.episodes):
+        # Original II.1: initialize state s at the configured start position.
         episode_number = ep + 1
         env.agent_pos = env.start_state
         env.steps = 0
@@ -22,7 +25,9 @@ def simulate(agent: Agent, env: Environment):
         is_terminal = False
 
         while not is_terminal and env.tracker.steps_per_ep < env.max_steps:
+            # Original II.a: choose a using epsilon-greedy policy.
             action = agent.epsilon_greedy(env.agent_pos)
+            # Original II.b: execute a and observe r, s', and termination.
             next_state, reward, is_terminal = env.take_step(env.agent_pos, action)
 
             if env.agent_pos not in agent.Q:
@@ -39,9 +44,13 @@ def simulate(agent: Agent, env: Environment):
                 td_target = reward + agent.gamma * max_q_next
 
             td_error = td_target - current_q
+            # Original II.b-c: store the transition and its current TD error;
+            # the latter determines its rank during priority sampling.
             agent.memory.push(env.agent_pos, action, reward, next_state, td_error)
 
             if len(agent.memory) > 0:
+                # Original II.c-e: rank-sample one stored transition, compute
+                # alpha_j, and update its tabular Q-value.
                 (sampled_state, sampled_action, sampled_reward, 
                     sampled_next_state, sampled_td_error, 
                     sampled_idx, adjusted_lr) = agent.adjust_lr()

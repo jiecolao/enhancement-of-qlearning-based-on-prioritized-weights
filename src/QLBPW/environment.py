@@ -3,6 +3,8 @@ from .tracker import EnvironmentTracker
 import random
 
 class Environment:
+    # Original algorithm II.b: this class executes actions and returns the
+    # next state, reward, and terminal status used by the tabular agent.
     def __init__(
             self,
             grid,
@@ -40,6 +42,8 @@ class Environment:
         )
 
     def generate_obstacles(self):
+        # Environment setup for Original I / II.1. Obstacles define the
+        # transition and terminal conditions used during each episode.
         self.obstacles.clear()
         self.obstacles = list(self.static_obstacles)
 
@@ -60,6 +64,7 @@ class Environment:
                 dynamic_added += 1
 
     def take_step(self, state, action):
+        # Original II.b: execute action a and observe reward r and state s'.
         x, y = state
 
         # Actions: 0="up", 1="right", 2="down", 3="left"
@@ -77,9 +82,11 @@ class Environment:
         is_terminal = False
 
         if next_state in self.obstacles:
+            # A collision is a negative transition and leaves the agent in s.
             reward = -1
             next_state = state
         elif next_state == self.end_state:
+            # Goal arrival terminates the episode; no later Q bootstrap occurs.
             reward = 1
             is_terminal = True
         else:

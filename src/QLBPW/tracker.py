@@ -12,6 +12,8 @@ import time
 if TYPE_CHECKING: from environment import Environment
 
 class EnvironmentTracker:
+    # Original algorithm support: records episode outcomes and evaluates the
+    # learned tabular policy; it is not part of the Q-value update in II.e.
 
     def __init__(self, agent: Agent, env: Environment):
         self.agent = agent
@@ -117,6 +119,8 @@ class EnvironmentTracker:
             log_file.write(text + "\n")
 
     def calculate_shortest_path(self):
+        # Evaluation reference: BFS computes the shortest valid path used for
+        # the optimality metric, not a training target for the Q-table.
         start = self.env.start_state
         goal = self.env.end_state
         obstacles = set(self.env.obstacles)
@@ -152,6 +156,7 @@ class EnvironmentTracker:
         return None
 
     def record_episode(self, success):
+        # Evaluation of each completed Original II episode.
         self.steps_history.append(self.steps_per_ep)
         self.reward_history.append(self.rewards_per_ep)
         self.success_history.append(int(success))
@@ -187,6 +192,7 @@ class EnvironmentTracker:
         return sum(self.optimality_history) / len(self.optimality_history)
 
     def record_qtable_metrics(self):
+        # QLBPW-specific reporting for the tabular state-space growth problem.
         states = len(self.agent.Q)
 
         qtable_value_bytes = sum(
@@ -219,6 +225,7 @@ class EnvironmentTracker:
             self._print_and_log("\n".join(grid_lines))
 
     def print_learned_path(self):
+        # Greedy evaluation of the learned Q-table (epsilon is not used here).
         curr_state = self.env.start_state
         path = [curr_state]
         is_terminal = False
