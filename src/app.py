@@ -57,7 +57,8 @@ def get_states(preset: dict, key: str) -> dict[str, tuple[int, int]]:
 
 
 def draw_grid(size: int, start: tuple[int, int], goal: tuple[int, int],
-              obstacles: set[tuple[int, int]], title: str) -> None:
+              obstacles: set[tuple[int, int]], title: str,
+              path: list[tuple[int, int]] | None = None, target=None) -> None:
     # Render larger maps compactly while retaining the grid and coordinates.
     fig, ax = plt.subplots(figsize=(min(9, max(4, size * 0.16)),
                                     min(8, max(4, size * 0.16))))
@@ -71,6 +72,12 @@ def draw_grid(size: int, start: tuple[int, int], goal: tuple[int, int],
     cells[sy, sx] = (0.16, 0.68, 0.42)
     cells[gy, gx] = (0.95, 0.68, 0.20)
     ax.imshow(cells, origin="upper", interpolation="nearest")
+    if path:
+        px, py = zip(*path)
+        ax.plot(px, py, color="#2563eb", linewidth=max(1.5, 5 / max(1, size / 8)),
+                marker="o", markersize=max(2, 5 / max(1, size / 10)),
+                alpha=0.9, zorder=4, label="Learned greedy path")
+        ax.legend(loc="upper right", fontsize=7, framealpha=0.9)
     ax.set_xticks(np.arange(-0.5, size, 1), minor=True)
     ax.set_yticks(np.arange(-0.5, size, 1), minor=True)
     ax.grid(which="minor", color="#cbd5e1", linewidth=0.45)
@@ -86,7 +93,75 @@ def draw_grid(size: int, start: tuple[int, int], goal: tuple[int, int],
     ax.text(gx, gy, "G", ha="center", va="center", color="#1f2937",
             fontweight="bold", fontsize=max(6, min(11, 150 / size)))
     fig.tight_layout()
-    st.pyplot(fig, use_container_width=True)
+    if target is None:
+        st.pyplot(fig, use_container_width=True)
+    else:
+        target.pyplot(fig, use_container_width=True)
+    plt.close(fig)
+
+
+
+def learned_path(agent, env, algorithm: str) -> list[tuple[int, int]]:
+    """Roll out the current greedy policy without exploration."""
+    path = [tuple(env.start_state)]
+    state = tuple(env.start_state)
+    original_pos, original_steps = env.agent_pos, env.steps
+    was_training = getattr(getattr(agent, "main_net", None), "training", None)
+    try:
+        for _ in range(env.max_steps):
+            env.agent_pos = state
+            if algorithm == "QLBPW":
+                values = agent.Q.get(state, np.zeros(agent.no_of_actions))
+                action = int(np.argmax(values))
+            else:
+                import torch
+                agent.main_net.eval()
+                with torch.no_grad():
+                    obs = torch.as_tensor(env.get_state(), dtype=torch.float32).unsqueeze(0)
+                    action = int(agent.main_net(obs).argmax(dim=1).item())
+            next_state, _, done, *rest = env.take_step(state, action)
+            state = tuple(next_state)
+            path.append(state)
+            if done or state == tuple(env.end_state):
+                break
+    finally:
+        env.agent_pos, env.steps = original_pos, original_steps
+        if algorithm == "EQLBPW" and was_training is not None:
+            agent.main_net.train(was_training)
+    return path
+
+
+def render_metrics(tracker, target, window=50):
+    """Plot reward, rolling success rate, and steps per episode."""
+    if tracker is None or not tracker.reward_history:
+        target.info("Metrics will appear after the first completed episode.")
+        return
+    rewards = np.asarray(tracker.reward_history, dtype=float)
+    steps = np.asarray(tracker.steps_history, dtype=float)
+    successes = np.asarray(tracker.success_history, dtype=float)
+    episodes = np.arange(1, len(rewards) + 1)
+    span = min(window, len(rewards))
+    mean_reward = np.convolve(rewards, np.ones(span) / span, mode="valid")
+    mean_steps = np.convolve(steps, np.ones(span) / span, mode="valid")
+    success_rate = np.convolve(successes, np.ones(span) / span, mode="valid") * 100
+    rolling_x = episodes[len(episodes) - len(mean_reward):]
+    fig, axes = plt.subplots(3, 1, figsize=(9, 8), sharex=True)
+    axes[0].plot(episodes, rewards, alpha=0.25, linewidth=0.8, label="Episode reward")
+    axes[0].plot(rolling_x, mean_reward, linewidth=2, label=f"{span}-episode mean")
+    axes[0].set_ylabel("Reward")
+    axes[0].legend(loc="best")
+    axes[1].plot(rolling_x, success_rate, linewidth=2)
+    axes[1].set_ylabel(f"Success (%)\n({span}-episode window)")
+    axes[1].set_ylim(-3, 103)
+    axes[2].plot(episodes, steps, alpha=0.25, linewidth=0.8, label="Steps / episode")
+    axes[2].plot(rolling_x, mean_steps, linewidth=2, label=f"{span}-episode mean")
+    axes[2].set_ylabel("Steps")
+    axes[2].set_xlabel("Episode")
+    axes[2].legend(loc="best")
+    for ax in axes:
+        ax.grid(alpha=0.25)
+    fig.tight_layout()
+    target.pyplot(fig, use_container_width=True)
     plt.close(fig)
 
 
@@ -259,8 +334,9 @@ def algorithm_page(algorithm: str) -> None:
     left, right = st.columns([1.05, 1])
     with left:
         st.subheader("Environment map")
-        draw_grid(size, start, goal, static_obstacles, environment_name)
-        st.caption("S = start · G = goal · dark cells = static obstacles")
+        map_slot = st.empty()
+        draw_grid(size, start, goal, static_obstacles, environment_name, target=map_slot)
+        st.caption("S = start · G = goal · dark cells = obstacles · blue line = learned greedy path")
     with right:
         st.subheader("Run configuration")
         st.write({"Algorithm": algorithm, "Environment": environment_name,
@@ -269,8 +345,9 @@ def algorithm_page(algorithm: str) -> None:
                   "Dynamic obstacle count": int(dynamic_count) if dynamic else 0,
                   "Static obstacles": len(static_obstacles)})
         st.subheader("Live training terminal")
-        terminal = st.empty()
-        terminal.code("Training output will appear here when a run starts.", language="text")
+        with st.container(height=320, border=True):
+            terminal = st.empty()
+            terminal.code("Training output will appear here when a run starts.", language="text")
 
     if run_clicked:
         if start == goal:
@@ -283,6 +360,7 @@ def algorithm_page(algorithm: str) -> None:
             run_button_placeholder = st.empty()
             run_button_placeholder.info("Training is running. Keep this page open to watch the log.")
             log_capture = LiveLog(terminal)
+            metrics_slot = st.empty()
             started = time.time()
             try:
                 # Construct with the selected environment and config-driven values.
@@ -305,7 +383,30 @@ def algorithm_page(algorithm: str) -> None:
                     env = EQLBPWEnvironment(agent=agent, **env_params)
                     simulation = simulate_eqlbpw
                 with contextlib.redirect_stdout(log_capture), contextlib.redirect_stderr(log_capture):
+                    # Hook episode recording to refresh the map and charts periodically.
+                    original_record_episode = env.tracker.record_episode
+                    episode_counter = {"n": 0}
+                    def dashboard_record_episode(success):
+                        original_record_episode(success)
+                        episode_counter["n"] += 1
+                        n = episode_counter["n"]
+                        if n % int(report_every) == 0 or n == int(episodes):
+                            current_path = learned_path(agent, env, algorithm)
+                            draw_grid(size, start, goal, set(env.obstacles),
+                                      environment_name + " · current policy",
+                                      path=current_path, target=map_slot)
+                            with metrics_slot.container():
+                                st.subheader("Learning progress")
+                                render_metrics(env.tracker, st.empty())
+                    env.tracker.record_episode = dashboard_record_episode
                     simulation(agent=agent, env=env)
+                    final_path = learned_path(agent, env, algorithm)
+                    draw_grid(size, start, goal, set(env.obstacles) or static_obstacles,
+                              environment_name + " · final learned policy",
+                              path=final_path, target=map_slot)
+                    with metrics_slot.container():
+                        st.subheader("Learning progress")
+                        render_metrics(env.tracker, st.empty())
                     log_capture.write(f"\nDashboard run completed in {time.time() - started:.1f}s.\n")
                     log_capture.flush()
                 st.success(f"{algorithm} training completed in {time.time() - started:.1f} seconds.")
@@ -314,6 +415,10 @@ def algorithm_page(algorithm: str) -> None:
                     "environment": environment_name,
                     "episodes": int(episodes),
                     "log": log_capture.getvalue(),
+                    "rewards": list(getattr(env.tracker, "reward_history", [])),
+                    "successes": list(getattr(env.tracker, "success_history", [])),
+                    "steps": list(getattr(env.tracker, "steps_history", [])),
+                    "path": final_path,
                 }
             except Exception as exc:
                 log_capture.write(f"\nERROR: {type(exc).__name__}: {exc}\n")
@@ -327,6 +432,7 @@ def algorithm_page(algorithm: str) -> None:
         with st.expander("Most recent dashboard run", expanded=False):
             st.write(f"{previous['time']} · {previous['environment']} · {previous['episodes']} episodes")
             st.code(previous["log"][-18000:], language="text")
+            st.caption("Episode metrics and the final learned path are retained for this session.")
 
     st.divider()
     render_history(algorithm)
