@@ -11,6 +11,8 @@ import time
 if TYPE_CHECKING: from .environment import Environment
 
 class EnvironmentTracker:
+    # Proposed evaluation branch: records success, path length, and
+    # shortest-path optimality; it does not alter the learning update.
 
     def __init__(self, agent: Agent, env: Environment):
         self.agent = agent
@@ -136,6 +138,8 @@ class EnvironmentTracker:
             log_file.write(text + "\n")
 
     def calculate_shortest_path(self):
+        # Proposed evaluation: compute the shortest valid reference path for
+        # path/optimality metrics. This is BFS, not the training DQN.
         start = self.env.start_state
         goal = self.env.end_state
         obstacles = set(self.env.obstacles)
@@ -179,6 +183,7 @@ class EnvironmentTracker:
         return None
     
     def record_episode(self, success):
+        # Proposed evaluation: retain per-episode success and path metrics.
         self.steps_history.append(self.steps_per_ep)
         self.reward_history.append(self.rewards_per_ep)
         self.success_history.append(int(success))
@@ -254,6 +259,8 @@ class EnvironmentTracker:
             self._print_and_log("\n".join(grid_lines))
 
     def print_learned_path(self):
+        # Proposed evaluation: run the learned greedy policy without
+        # exploration to inspect path and goal performance.
         curr_state = self.env.start_state
         path = [curr_state]
         is_terminal = False

@@ -6,6 +6,8 @@ import time
 import tracemalloc
 
 def simulate(agent: Agent, env: Environment):
+    # Proposed algorithm II: episode/interaction loop connecting the
+    # environment, epsilon-greedy policy, replay memory, and learning update.
     tracemalloc.start()
     start_time = time.time()
 
@@ -22,12 +24,15 @@ def simulate(agent: Agent, env: Environment):
         episode_number = ep + 1
 
         while not is_terminal and env.tracker.steps_per_ep < env.max_steps:
+            # Proposed 2 / II.a: epsilon-greedy action selection.
             action = agent.e_greedy(state)
 
+            # Proposed II.b: observe the transition and EQLBPW metadata.
             next_position, reward, is_terminal, info = env.take_step(env.agent_pos, action)
 
             next_state = env.get_state()
 
+            # Proposed II.c: store a new transition with maximum priority.
             agent.memory.push(
                 state=state,
                 action=action,
@@ -39,6 +44,8 @@ def simulate(agent: Agent, env: Environment):
                 distance_progress=info["distance_progress"],
             )
 
+            # Proposed II.d: prioritized sampling, Double-DQN target, weighted
+            # Huber update, gradient clipping, and priority refresh.
             agent.update()
 
             state = next_state
@@ -61,12 +68,15 @@ def simulate(agent: Agent, env: Environment):
                 if info["goal"]:
                     env.tracker.goal_count += 1
 
+        # Proposed II.f-g: decay epsilon and schedule the IS exponent beta
+        # once per episode.
         training_progress = ep / max(env.episodes - 1, 1)
         agent.update_beta(training_progress)
 
         agent.decay_e() 
 
         if episode_number % agent.target_sync_freq == 0:
+            # Proposed II.h: periodic target-network synchronization.
             agent.sync_target()
 
         # Tracker
@@ -85,7 +95,7 @@ def simulate(agent: Agent, env: Environment):
                 epsilon=agent.e
             )
             interval_start_time = time.time()
-            env.tracker.print_learned_path()    # Tracker
+            env.tracker.print_learned_path()
 
         if env.is_dynamic_obs and episode_number % 10 == 0:
             env.generate_obstacles()            # Dynamic Obstacle

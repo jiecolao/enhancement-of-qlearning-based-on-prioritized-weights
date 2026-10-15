@@ -5,6 +5,8 @@ import numpy as np
 
 
 class Environment:
+    # Proposed algorithm II.b: supplies the state, reward, terminal flag,
+    # collision C_i, goal G_i, and distance progress D_i for each transition.
     def __init__(
             self,
             grid,
@@ -45,6 +47,8 @@ class Environment:
         )
 
     def reset(self):
+        # Proposed algorithm II.a: initialize the episode at the configured
+        # starting state and return its encoded observation.
         self.agent_pos = self.start_state
         self.steps = 0
 
@@ -74,6 +78,8 @@ class Environment:
                 dynamic_added += 1
 
     def take_step(self, state, action):
+        # Proposed algorithm II.b: execute a discrete grid action and produce
+        # the transition fields stored by the EQLBPW replay buffer.
         x, y = state
 
         # Actions:
@@ -106,13 +112,14 @@ class Environment:
         # check whether the agent reached the goal
         goal_reached = next_state == self.end_state
 
-        # calculate distance before and after movement
+        # Proposed 8: Manhattan distance is used to measure path progress.
         old_distance = self.distance_to_goal(state)
         new_distance = self.distance_to_goal(next_state)
 
         distance_progress = old_distance - new_distance
 
-        # reward
+        # Proposed 7: shaped rewards distinguish collision, goal, and ordinary
+        # movement; these values are experiment semantics, not replay priority.
         if collision:
             reward = -10.0
 
@@ -122,7 +129,8 @@ class Environment:
         else:
             reward = -0.1
 
-        # terminate ep when goal is reached
+        # Proposed algorithm II.b: goal arrival is terminal. The simulator also
+        # enforces the maximum-step episode boundary.
         is_terminal = goal_reached
 
         # Update environment state
@@ -138,6 +146,9 @@ class Environment:
         return next_state, reward, is_terminal, info
 
     def get_state(self):
+        # Proposed algorithm: state representation presented to the DQN. It
+        # combines normalized agent/goal coordinates with a local 5x5 obstacle
+        # window (4 + 25 = 29 features).
         agent_x, agent_y = self.agent_pos
         goal_x, goal_y = self.end_state
 
@@ -173,6 +184,7 @@ class Environment:
         return np.array(state, dtype=np.float32)
 
     def distance_to_goal(self, state):
+        # Proposed 8: Manhattan distance |x - x_goal| + |y - y_goal|.
         return (
             abs(state[0] - self.end_state[0])
             + abs(state[1] - self.end_state[1])

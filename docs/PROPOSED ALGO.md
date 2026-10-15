@@ -225,3 +225,33 @@ II. For Each Episode
     h. Every C steps, synchronize the Target Network:
         θ' ← θ
 
+    IMPLEMENTATION MAP
+
+    The proposed-algorithm labels below identify where each enhancement is
+    implemented in the EQLBPW code. These annotations describe the current
+    behavior; they do not imply that the algorithms have been experimentally
+    validated or that QLBPW and EQLBPW use identical reward semantics.
+
+    - Proposed 1, Deep Q-learning: `src/EQLBPW/agent.py`, `QNetwork`, `Agent.main_net`.
+    - Proposed 2, decaying epsilon: `src/EQLBPW/agent.py`, `Agent.e_greedy` and
+      `Agent.decay_e`; the per-episode call is in `src/EQLBPW/simulator.py`.
+    - Proposed 3, Double Deep Q-learning: `src/EQLBPW/agent.py`, `main_net`,
+      `target_net`, and the separate action-selection/evaluation steps in
+      `Agent.update`.
+    - Proposed 4, EQLBPW collision/goal/distance weighting:
+      `Agent.calculate_priority`, using transition metadata from
+      `src/EQLBPW/environment.py`.
+    - Proposed 5, prioritized experience replay: `ReplayBuffer.sample`,
+      `ReplayBuffer.update_priorities`, and maximum-priority insertion in
+      `src/EQLBPW/agent.py`.
+    - Proposed 6, improved importance sampling: `ReplayBuffer.importance_weights`
+      and the weighted batch Huber loss in `Agent.update`.
+    - Proposed 7, changed reward shaping: `Environment.take_step`, which assigns
+      collision, goal, and ordinary-movement rewards.
+    - Proposed 8, Manhattan distance: `Environment.distance_to_goal` and
+      `Environment.take_step`, where distance progress is recorded.
+    - State representation and transition assembly: `Environment.get_state`,
+      `Environment.take_step`, and the replay insertion in
+      `src/EQLBPW/simulator.py`.
+    - Path/success/optimality evaluation: `src/EQLBPW/tracker.py`. Its BFS shortest
+      path is a reference metric and is separate from the learned DQN policy.

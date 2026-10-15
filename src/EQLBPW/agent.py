@@ -7,8 +7,15 @@ import numpy as np
 import random
 import os
 
+# Proposed algorithm components implemented in this module:
+# - Deep Q-learning and Double DQN (QNetwork, main_net, target_net, update).
+# - EQLBPW path-aware priority weighting (collision, goal, distance_progress).
+# - Prioritized Experience Replay (ReplayBuffer.sample/update_priorities).
+# - Improved importance sampling (ReplayBuffer.importance_weights).
+
 class QNetwork(nn.Module):
-    # OBJ 3: Double Deep Q-Learning
+    # Proposed 1: the neural action-value function used by Deep Q-learning.
+    # Proposed 3 is completed by using separate main and target networks below.
 
     def __init__(self, state_dim, action_dim):
         super(QNetwork, self).__init__()
@@ -22,7 +29,7 @@ class QNetwork(nn.Module):
         )
 
     def forward(self, state):
-        # Defines how data moves in the NN
+        # Proposed 1: map an encoded environment state to one Q-value per action.
         return self.net(state)
 
 
@@ -43,6 +50,8 @@ class ReplayBuffer:
         goal=0.0,
         distance_progress=0.0
     ):
+        # Proposed 5: new transitions receive the current maximum priority so
+        # they are sampled at least once before their TD error is known.
         transition = {
             "state": state,
             "action": action,
@@ -58,6 +67,7 @@ class ReplayBuffer:
         self.buffer.append(transition)
 
     def sample(self, priority_alpha):
+        # Proposed 5: convert priorities into P(i) proportional to p_i^alpha.
         priorities = np.array(
             [transition["priority"] for transition in self.buffer],
             dtype=np.float64
@@ -78,6 +88,8 @@ class ReplayBuffer:
         return batch, indices, probabilities[indices]
 
     def importance_weights(self, probabilities, beta):
+        # Proposed 6: compensate for prioritized sampling with normalized
+        # w_i = (N * P(i))^(-beta).
         n = len(self.buffer)
 
         weights = (n * probabilities) ** (-beta)
@@ -86,6 +98,7 @@ class ReplayBuffer:
         return torch.FloatTensor(weights).unsqueeze(1)
 
     def update_priorities(self, indices, priorities):
+        # Proposed 5: replace sampled priorities after the learning update.
         for index, priority in zip(indices, priorities):
             priority = float(priority)
 
@@ -142,6 +155,8 @@ class Agent:
         self.main_net = QNetwork(state_dim, action_dim)
         self.target_net = QNetwork(state_dim, action_dim)
 
+        # Proposed 3: initialize Q' with Q's parameters, then keep it fixed
+        # between periodic synchronizations.
         self.target_net.load_state_dict(self.main_net.state_dict())
         self.target_net.eval()
 
@@ -206,13 +221,15 @@ class Agent:
             return self.main_net(state_t).argmax().item()
 
     def decay_e(self):
-        # OBJ 2: Decaying epsilon
+        # Proposed 2: epsilon <- max(epsilon_min, epsilon * epsilon_decay).
         self.e = max(self.e_min, self.e * self.e_decay)
 
     def sync_target(self):
+        # Proposed 3: periodic target-network synchronization, theta' <- theta.
         self.target_net.load_state_dict(self.main_net.state_dict())
 
     def update_beta(self, progress):
+        # Proposed 6: linearly increase beta from beta_start to beta_end.
         progress = min(max(progress, 0.0), 1.0)
         self.beta = (self.beta_start + progress * (self.beta_end - self.beta_start))
 
@@ -224,6 +241,8 @@ class Agent:
         goal,
         distance_progress
     ):
+        # Proposed 4: EQLBPW path-aware weighting:
+        # W_i = 1 + w_c*C_i + w_g*G_i + w_d*max(D_i, 0).
         weight = (
             1.0
             + self.collision_weight * collision
@@ -233,12 +252,14 @@ class Agent:
         )
 
         priority = (
+            # Proposed 5: p_i = (|TD error| + priority_epsilon) * W_i.
             td_error.abs() + 1e-5
         ) * weight
 
         return priority
     
     def update(self):
+        # Proposed algorithm II.d: one prioritized replay / network-update step.
         if len(self.memory) < self.batch_size:
             return
 
@@ -289,16 +310,23 @@ class Agent:
         )
 
         with torch.no_grad():
+            # Proposed 3: Double DQN selects a' with Q and evaluates it with Q'.
             best_next_actions = (self.main_net(next_states).argmax(1, keepdim=True))
 
             q_next = (self.target_net(next_states).gather(1, best_next_actions))
 
+            # Proposed algorithm II.d.3.1: terminal transitions do not bootstrap
+            # because (1 - done) becomes zero.
             q_target = (rewards + (1 - dones) * self.gamma * q_next)
 
+        # Proposed algorithm II.d.3.3: TD error delta_i = y_i - Q(s_i, a_i).
         td_error = q_target - q_current
 
+        # Proposed algorithm II.d.4: per-transition Huber loss.
         element_loss = self.criterion(q_current, q_target)
 
+        # Proposed algorithm II.d.4: apply importance-sampling weights before
+        # averaging the batch loss.
         loss = (weights * element_loss).mean()
 
         self.optimizer.zero_grad()
@@ -313,6 +341,8 @@ class Agent:
         self.optimizer.step()
 
         with torch.no_grad():
+            # Proposed algorithm II.d.3.4-3.6: update EQLBPW priorities from
+            # TD error plus collision, goal, and positive distance progress.
             priorities = self.calculate_priority(
                 td_error,
                 collisions,
