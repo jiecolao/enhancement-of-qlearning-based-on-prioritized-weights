@@ -26,13 +26,13 @@ if str(SRC_DIR) not in sys.path:
 
 from agent_config import EQLBPWAgent, QLBPWAgent
 from env_config import GeneralEnvironment, Intramuros
-from env_settings import PRESET_ENVIRONMENTS
+from env_settings import PRESET_ENVIRONMENTS, OBSTACLES
 from QLBPW.agent import Agent as QLBPWAgentImpl
 from QLBPW.environment import Environment as QLBPWEnvironment
-from QLBPW.simulator import simulate as simulate_qlbpw
+from src.QLBPW.simulator import simulate as simulate_qlbpw
 from EQLBPW.agent import Agent as EQLBPWAgentImpl
 from EQLBPW.environment import Environment as EQLBPWEnvironment
-from EQLBPW.simulator import simulate as simulate_eqlbpw
+from src.EQLBPW.simulator import simulate as simulate_eqlbpw
 
 
 st.set_page_config(page_title="Prioritized Q-Learning Lab", page_icon="🧭", layout="wide")
@@ -245,6 +245,15 @@ def algorithm_page(algorithm: str) -> None:
 
     # The repository presets are the source of truth for map dimensions and static obstacles.
     static_obstacles = set(preset.get("obstacles", set()))
+    # env_settings.py keeps detailed obstacle layouts separately from presets.
+    obstacle_preset = next(
+        (item for item in OBSTACLES if item.get("name") == environment_name),
+        None,
+    )
+    if obstacle_preset is None and environment_name == "QLBPW (9x9)":
+        obstacle_preset = next((item for item in OBSTACLES if item.get("name") == "QLBPW"), None)
+    if obstacle_preset is not None:
+        static_obstacles = set(obstacle_preset.get("obstacles", static_obstacles))
     static_obstacles.discard(start)
     static_obstacles.discard(goal)
     left, right = st.columns([1.05, 1])
